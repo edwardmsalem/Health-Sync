@@ -17,6 +17,7 @@ import {
   isConnected,
   useFitbitAuthRequest,
 } from "./src/fitbit/auth.ts";
+import { enableBackgroundSync } from "./src/sync/background.ts";
 import { runSync } from "./src/sync/runSync.ts";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -32,6 +33,15 @@ export default function App() {
   useEffect(() => {
     isConnected().then(setFitbitConnected);
   }, []);
+
+  // Once connected, ask iOS to run the sync periodically in the background.
+  useEffect(() => {
+    if (fitbitConnected) {
+      enableBackgroundSync().catch(() => {
+        // Background refresh disabled in Settings — manual sync still works.
+      });
+    }
+  }, [fitbitConnected]);
 
   useEffect(() => {
     if (response?.type === "success" && request && response.params.code) {
@@ -90,7 +100,8 @@ export default function App() {
           <Text style={styles.cardTitle}>2 · Sync</Text>
           <Text style={styles.hint}>
             Reads the last 7 days from Apple Health and Fitbit, removes
-            overlap (both devices worn), and fills each side's gaps.
+            overlap (both devices worn), and fills each side's gaps. Once
+            connected, iOS also runs this automatically a few times a day.
           </Text>
           <Pressable
             style={[styles.button, (!fitbitConnected || syncing) && styles.buttonDisabled]}

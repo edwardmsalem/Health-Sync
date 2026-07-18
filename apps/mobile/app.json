@@ -18,7 +18,11 @@
         "com.apple.developer.healthkit.background-delivery": true
       }
     },
+    "extra": {
+      "fitbitClientId": "REPLACE_WITH_YOUR_FITBIT_CLIENT_ID"
+    },
     "plugins": [
+      "expo-background-task",
       [
         "@kingstinct/react-native-healthkit",
         {

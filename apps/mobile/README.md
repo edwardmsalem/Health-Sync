@@ -5,9 +5,15 @@ powered by the shared engine in `packages/engine`. No Android device is
 needed — your Fitbit's data lives in Fitbit's cloud, and the app talks to it
 directly over the Fitbit Web API.
 
+Once Fitbit is connected, the app registers a **background task** so iOS
+re-runs the sync automatically a few times a day (cadence is up to iOS;
+keep Background App Refresh enabled in Settings). The Sync button is for
+on-demand runs and first-time setup.
+
 ```
 App.tsx                     UI: connect Fitbit, sync, results
 src/
+  sync/background.ts        BGTaskScheduler task: periodic automatic sync
   healthkit/
     mapping.ts              HK types/units/stages <-> engine records (pure, tested)
     bridge.ts               engine HealthKitBridge over a narrow HKClient
@@ -27,8 +33,8 @@ src/
 1. **Fitbit developer app** (2 minutes): at <https://dev.fitbit.com/apps>
    register an app with OAuth 2.0 Application Type **Personal** (this grants
    intraday — minute-level — access for your own account) and Redirect URL
-   `healthsync://oauth`. Paste the Client ID into `FITBIT_CLIENT_ID` in
-   `src/fitbit/auth.ts`.
+   `healthsync://oauth`. Paste the Client ID into `expo.extra.fitbitClientId`
+   in `app.json`.
 2. **Apple side**: an Apple Developer account with the HealthKit capability
    (the config plugin in `app.json` sets up entitlements and Info.plist).
 
