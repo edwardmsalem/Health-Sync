@@ -1,10 +1,13 @@
 /**
  * Sync ledger: durable record of what this engine has already written to each
  * platform, so repeated syncs are idempotent and nothing echoes back.
+ *
+ * This module is runtime-agnostic (Node, React Native, browser). The
+ * Node-only JSON-file implementation lives in ledger-file.ts
+ * (import "health-sync/ledger-file") so bundlers never pull in node:fs.
+ * On React Native, persist via `toJSON`/`fromJSON` with any storage API.
  */
 
-import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { dirname } from "node:path";
 import type { EpochMs, Platform } from "../types.js";
 
 export interface LedgerState {
@@ -42,34 +45,22 @@ export class InMemoryLedger implements SyncLedger {
     this.state.lastSyncedThrough[platform] = ts;
   }
 
-  async save(): Promise<void> {
-    // no-op for in-memory
-  }
-}
-
-/** JSON-file-backed ledger for CLI / server deployments. */
-export class FileLedger extends InMemoryLedger {
-  constructor(private readonly path: string) {
-    super();
+  /** Serialize for persistence (React Native storage, databases, ...). */
+  toJSON(): LedgerState {
+    return this.state;
   }
 
-  static async load(path: string): Promise<FileLedger> {
-    const ledger = new FileLedger(path);
-    try {
-      const raw = await readFile(path, "utf8");
-      const parsed = JSON.parse(raw) as LedgerState;
-      ledger.state = {
-        written: parsed.written ?? {},
-        lastSyncedThrough: parsed.lastSyncedThrough ?? {},
-      };
-    } catch {
-      // First run: start empty.
-    }
+  /** Restore from a previously serialized state. */
+  static fromJSON(state: Partial<LedgerState> | undefined): InMemoryLedger {
+    const ledger = new InMemoryLedger();
+    ledger.state = {
+      written: state?.written ?? {},
+      lastSyncedThrough: state?.lastSyncedThrough ?? {},
+    };
     return ledger;
   }
 
-  override async save(): Promise<void> {
-    await mkdir(dirname(this.path), { recursive: true });
-    await writeFile(this.path, JSON.stringify(this.state, null, 2), "utf8");
+  async save(): Promise<void> {
+    // no-op for in-memory; subclasses persist
   }
 }

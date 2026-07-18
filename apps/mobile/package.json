@@ -1,0 +1,30 @@
+{
+  "name": "health-sync-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo run:ios",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@kingstinct/react-native-healthkit": "^9.0.0",
+    "@react-native-async-storage/async-storage": "^2.1.0",
+    "expo": "^54.0.0",
+    "expo-auth-session": "*",
+    "expo-crypto": "*",
+    "expo-secure-store": "*",
+    "expo-status-bar": "*",
+    "expo-web-browser": "*",
+    "health-sync": "*",
+    "react": "*",
+    "react-native": "*"
+  },
+  "devDependencies": {
+    "@types/react": "*",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

@@ -13,7 +13,7 @@ export type { DedupedPoints } from "./dedup/points.js";
 export { dedupeSeries, coveredMinutes, trimToGaps } from "./dedup/series.js";
 export type { SeriesSample, DedupedSeries } from "./dedup/series.js";
 export { fingerprint } from "./sync/fingerprint.js";
-export { InMemoryLedger, FileLedger } from "./sync/ledger.js";
+export { InMemoryLedger } from "./sync/ledger.js";
 export type { SyncLedger, LedgerState } from "./sync/ledger.js";
 export { SyncEngine, fillStepGaps, fillCumulativeGaps } from "./sync/engine.js";
 export type { SyncOptions, SyncReport, PlatformPlan } from "./sync/engine.js";

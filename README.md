@@ -4,6 +4,13 @@ Two-way smart sync between **Apple Health** and **Google Health** (Health
 Connect / Fitbit) that understands **overlapping activity from multiple
 devices**.
 
+This is a monorepo:
+
+| Package | What it is |
+|---|---|
+| [`packages/engine`](packages/engine) | The platform-agnostic sync + dedup engine (this README) — 39 tests |
+| [`apps/mobile`](apps/mobile) | The iOS app: HealthKit ⇄ Fitbit cloud, built on the engine — 22 tests, [setup guide](apps/mobile/README.md) |
+
 If you wear an Apple Watch and a Fitbit at the same time, both record the same
 walk and the same night's sleep. Naively merging the two platforms sums them
 and doubles your numbers. This engine builds one canonical timeline, removes
@@ -160,16 +167,16 @@ echo prevention.
 ## Development
 
 ```
-npm install
-npm test          # 39 tests covering overlap scenarios
+npm install       # workspace root
+npm test          # engine (39) + app (22) test suites
 npm run demo      # both-devices-worn walkthrough
 npm run typecheck
 ```
 
-## Project layout
+## Engine layout
 
 ```
-src/
+packages/engine/src/
   types.ts            normalized data model (steps, sleep, workouts, HR)
   config.ts           device priority + dedup thresholds
   dedup/

@@ -1,31 +1,13 @@
 {
-  "name": "health-sync",
-  "version": "0.1.0",
-  "description": "Two-way smart sync between Apple Health and Google Health (Health Connect / Fitbit) with overlap-aware deduplication for multi-device users.",
-  "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "scripts": {
-    "build": "tsc",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "demo": "tsx src/demo.ts",
-    "typecheck": "tsc --noEmit"
-  },
-  "keywords": [
-    "apple-health",
-    "healthkit",
-    "google-fit",
-    "health-connect",
-    "fitbit",
-    "sync",
-    "deduplication"
+  "name": "health-sync-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
   ],
-  "license": "MIT",
-  "devDependencies": {
-    "@types/node": "^22.10.0",
-    "tsx": "^4.19.0",
-    "typescript": "^5.7.0",
-    "vitest": "^2.1.0"
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "demo": "npm run demo -w health-sync"
   }
 }
