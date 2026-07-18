@@ -11,7 +11,8 @@
       "supportsTablet": false,
       "infoPlist": {
         "NSHealthShareUsageDescription": "Health Sync reads your activity, sleep, and vitals so it can merge them with your Google/Fitbit data without double counting.",
-        "NSHealthUpdateUsageDescription": "Health Sync writes activity recorded by your other devices into Apple Health so both platforms show your complete history."
+        "NSHealthUpdateUsageDescription": "Health Sync writes activity recorded by your other devices into Apple Health so both platforms show your complete history.",
+        "ITSAppUsesNonExemptEncryption": false
       },
       "entitlements": {
         "com.apple.developer.healthkit": true,

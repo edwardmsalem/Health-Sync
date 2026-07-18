@@ -6,6 +6,8 @@
   "scripts": {
     "start": "expo start",
     "ios": "expo run:ios",
+    "build:testflight": "eas build --platform ios --profile production",
+    "submit:testflight": "eas submit --platform ios --latest",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

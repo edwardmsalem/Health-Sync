@@ -38,7 +38,31 @@ src/
 2. **Apple side**: an Apple Developer account with the HealthKit capability
    (the config plugin in `app.json` sets up entitlements and Info.plist).
 
-## Build & run (needs a Mac with Xcode; HealthKit does not exist on simulator-only data, use a real iPhone for meaningful testing)
+## Install via TestFlight (recommended — no Mac needed)
+
+Builds run on Expo's EAS cloud and submit straight to App Store Connect.
+Prerequisites: a **paid Apple Developer Program** membership ($99/yr —
+TestFlight requires it) and a free Expo account.
+
+```bash
+npm install                    # repo root
+cd apps/mobile
+npm i -g eas-cli && eas login  # free Expo account
+eas init                       # links the project to your Expo account (once)
+npm run build:testflight       # cloud build; sign in with your Apple ID when
+                               # prompted — EAS creates certs/profiles and the
+                               # HealthKit-capable App ID automatically
+npm run submit:testflight      # uploads the finished build to App Store Connect
+```
+
+Then in [App Store Connect](https://appstoreconnect.apple.com) → your app →
+**TestFlight**: add yourself to Internal Testing, and install the app on your
+iPhone through the TestFlight app. Internal builds are installable within
+minutes of processing — no App Review needed. Later builds are just
+`build:testflight` + `submit:testflight` again; the build number
+auto-increments.
+
+## Build & run locally (alternative; needs a Mac with Xcode)
 
 ```bash
 npm install               # from the repo root (workspaces)
