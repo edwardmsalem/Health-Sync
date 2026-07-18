@@ -48,6 +48,18 @@ fake Fitbit HTTP server around the **real** engine and **real** bridges,
 verifying overlap dedup, gap-filling, tagging, and echo-free re-runs. The
 only untested file is `src/healthkit/client.ts` (requires a device).
 
+## Google Health's built-in "Connect to Apple Health"
+
+The Google Health (Fitbit) iOS app offers its own Apple Health connection.
+It is **import-only** (Apple → Google): Apple Health never receives your
+Fitbit data through it, which is the direction that matters. Recommendation:
+**leave it OFF** and let this app own both directions — one transport per
+direction keeps every record tagged and deduped under our rules, instead of
+depending on Google's opaque merge for the overlap. (If you do enable it,
+the sync stays correct — gap-filling means we never add data to time a
+platform already covers — but Google-side totals then rely on Google's own
+multi-device arbitration.)
+
 ## Known platform asymmetries (Fitbit API limitations)
 
 - Fitbit's API **cannot ingest raw step / heart-rate / distance samples** —
