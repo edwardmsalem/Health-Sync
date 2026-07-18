@@ -24,8 +24,10 @@ export function fingerprint(record: HealthRecord): string {
     case "workout":
       h.update(record.activity);
       break;
-    case "heart_rate":
-      h.update(String(record.bpm));
+    case "cumulative":
+    case "point":
+      h.update(record.metric);
+      h.update(String(record.value));
       break;
   }
   return h.digest("hex").slice(0, 24);

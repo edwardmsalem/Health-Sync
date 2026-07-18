@@ -78,17 +78,64 @@ export interface WorkoutRecord extends BaseRecord {
   distanceMeters?: number;
 }
 
-export interface HeartRateSample extends BaseRecord {
-  type: "heart_rate";
-  /** Beats per minute (instantaneous or short-window average). */
-  bpm: number;
+/**
+ * Cumulative interval metrics: a quantity accumulated over a time span.
+ * Two devices measuring the same span double-count when summed, so these get
+ * the same minute-level source arbitration as steps.
+ * Known metrics are listed for autocomplete; any string is accepted so
+ * providers can pass through platform-specific types.
+ */
+export type CumulativeMetric =
+  | "distance_m"
+  | "active_energy_kcal"
+  | "basal_energy_kcal"
+  | "floors_climbed"
+  | "elevation_gained_m"
+  | "exercise_minutes"
+  | "hydration_ml"
+  | "dietary_energy_kcal"
+  | (string & {});
+
+export interface CumulativeSample extends BaseRecord {
+  type: "cumulative";
+  metric: CumulativeMetric;
+  value: number;
+}
+
+/**
+ * Point-in-time metrics: an instantaneous reading. Duplicates don't inflate
+ * sums (platforms average them), but two devices sampling the same moment
+ * still pollute series, so near-simultaneous readings from different sources
+ * are deduped by device priority.
+ */
+export type PointMetric =
+  | "heart_rate_bpm"
+  | "resting_heart_rate_bpm"
+  | "hrv_sdnn_ms"
+  | "blood_oxygen_pct"
+  | "respiratory_rate_bpm"
+  | "vo2_max"
+  | "body_temperature_c"
+  | "weight_kg"
+  | "body_fat_pct"
+  | "height_m"
+  | "blood_glucose_mgdl"
+  | "blood_pressure_systolic_mmhg"
+  | "blood_pressure_diastolic_mmhg"
+  | (string & {});
+
+export interface PointSample extends BaseRecord {
+  type: "point";
+  metric: PointMetric;
+  value: number;
 }
 
 export type HealthRecord =
   | StepsSample
   | SleepSession
   | WorkoutRecord
-  | HeartRateSample;
+  | CumulativeSample
+  | PointSample;
 
 export type RecordType = HealthRecord["type"];
 
@@ -112,4 +159,14 @@ export function overlapMs(a: TimeRange, b: TimeRange): number {
 
 export function overlaps(a: TimeRange, b: TimeRange): boolean {
   return overlapMs(a, b) > 0;
+}
+
+/**
+ * Whether a record falls inside a query range. Unlike `overlaps`, this
+ * handles instantaneous records (point samples, where start === end), which
+ * have no duration to overlap with.
+ */
+export function intersectsRange(r: TimeRange, range: TimeRange): boolean {
+  if (r.start === r.end) return r.start >= range.start && r.start < range.end;
+  return overlaps(r, range);
 }

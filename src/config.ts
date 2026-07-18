@@ -32,6 +32,12 @@ export interface DedupConfig {
    * more than this fraction of the shorter workout. Default: 0.5.
    */
   workoutOverlapThreshold: number;
+  /**
+   * A point reading (heart rate, weight, SpO2, ...) from a lower-priority
+   * source is a duplicate when a better source has a reading of the same
+   * metric within this window. Default: 5 minutes.
+   */
+  pointToleranceMs: number;
 }
 
 export const DEFAULT_DEDUP_CONFIG: DedupConfig = {
@@ -39,6 +45,7 @@ export const DEFAULT_DEDUP_CONFIG: DedupConfig = {
   stepsStrategy: "max",
   minSleepFragmentMs: 15 * 60 * 1000,
   workoutOverlapThreshold: 0.5,
+  pointToleranceMs: 5 * 60 * 1000,
 };
 
 /**

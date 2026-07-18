@@ -5,6 +5,8 @@ import { dedupeSteps } from "../dedup/steps.js";
 import { DEFAULT_DEDUP_CONFIG } from "../config.js";
 import { isSyncAuthored } from "../types.js";
 import type {
+  CumulativeSample,
+  PointSample,
   SourceRef,
   StepsSample,
   SleepSession,
@@ -186,5 +188,104 @@ describe("SyncEngine", () => {
     expect(
       () => new SyncEngine([new MemoryProvider("apple"), new MemoryProvider("apple")]),
     ).toThrow();
+  });
+});
+
+describe("SyncEngine — all metric classes", () => {
+  const cumulative = (
+    source: SourceRef,
+    start: number,
+    end: number,
+    metric: CumulativeSample["metric"],
+    value: number,
+  ): CumulativeSample => ({ type: "cumulative", source, start, end, metric, value });
+
+  const point = (
+    source: SourceRef,
+    at: number,
+    metric: PointSample["metric"],
+    value: number,
+  ): PointSample => ({ type: "point", source, start: at, end: at, metric, value });
+
+  it("syncs heart rate, weight, and distance across platforms without echo", async () => {
+    const { apple, google, engine } = make();
+    const scale: SourceRef = { id: "withings-scale", platform: "google" };
+    // Watch HR during a workout; Fitbit HR overnight; weight only on Google.
+    apple.addNative(point(watch, day + 7 * H, "heart_rate_bpm", 142));
+    google.addNative(point(fitbit, day + 3 * H, "heart_rate_bpm", 52));
+    google.addNative(point(scale, day + 6 * H, "weight_kg", 82.4));
+    apple.addNative(cumulative(watch, day + 7 * H, day + 8 * H, "distance_m", 8100));
+
+    const report = await engine.sync(range);
+    expect(report.canonical.points).toBe(3);
+
+    // Apple received the overnight HR, the weight, nothing it already had.
+    const appleRecords = await apple.read(range);
+    const appleWeight = appleRecords.filter(
+      (r) => r.type === "point" && r.metric === "weight_kg",
+    );
+    expect(appleWeight).toHaveLength(1);
+    expect(appleWeight[0]).toMatchObject({ value: 82.4 });
+    // Google received the workout HR and the distance.
+    const googleRecords = await google.read(range);
+    expect(
+      googleRecords.filter((r) => r.type === "cumulative" && r.metric === "distance_m"),
+    ).toHaveLength(1);
+    expect(
+      googleRecords.filter(
+        (r) => r.type === "point" && r.metric === "heart_rate_bpm",
+      ),
+    ).toHaveLength(2);
+
+    // Idempotent.
+    const second = await engine.sync(range);
+    for (const plan of second.plans) {
+      expect(plan.writes).toHaveLength(0);
+      expect(plan.deletes).toHaveLength(0);
+    }
+  });
+
+  it("does not copy overlapping distance both devices measured", async () => {
+    const { apple, google, engine } = make();
+    apple.addNative(cumulative(watch, day + 8 * H, day + 9 * H, "distance_m", 3200));
+    google.addNative(cumulative(fitbit, day + 8 * H, day + 9 * H, "distance_m", 3350));
+
+    const report = await engine.sync(range);
+    expect(report.cumulativeDoubleCountRemoved["distance_m"]).toBeGreaterThan(0);
+    for (const plan of report.plans) {
+      expect(plan.writes).toHaveLength(0);
+    }
+  });
+
+  it("does not copy a near-simultaneous HR reading the platform already has", async () => {
+    const { apple, google, engine } = make();
+    apple.addNative(point(watch, day + 7 * H, "heart_rate_bpm", 142));
+    google.addNative(point(fitbit, day + 7 * H + 2 * M, "heart_rate_bpm", 139));
+
+    const report = await engine.sync(range);
+    expect(report.pointDuplicatesRemoved).toBe(1);
+    for (const plan of report.plans) {
+      expect(plan.writes).toHaveLength(0);
+    }
+  });
+
+  it("cumulative metrics gap-fill independently of steps coverage", async () => {
+    const { apple, google, engine } = make();
+    // Google has native STEPS for the morning hour but no distance; the
+    // watch's distance for that hour must still sync (different metric).
+    apple.addNative(cumulative(watch, day + 8 * H, day + 9 * H, "distance_m", 3200));
+    google.addNative({
+      type: "steps",
+      source: fitbit,
+      start: day + 8 * H,
+      end: day + 9 * H,
+      steps: 4000,
+    } satisfies StepsSample);
+
+    await engine.sync(range);
+    const googleDistance = (await google.read(range)).filter(
+      (r) => r.type === "cumulative" && r.metric === "distance_m",
+    );
+    expect(googleDistance).toHaveLength(1);
   });
 });

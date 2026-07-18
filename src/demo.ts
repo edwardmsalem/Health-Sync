@@ -11,7 +11,13 @@ import { SyncEngine } from "./sync/engine.js";
 import { MemoryProvider } from "./providers/memory.js";
 import { dedupeSteps } from "./dedup/steps.js";
 import { DEFAULT_DEDUP_CONFIG } from "./config.js";
-import type { SourceRef, StepsSample, SleepSession } from "./types.js";
+import type {
+  CumulativeSample,
+  PointSample,
+  SourceRef,
+  StepsSample,
+  SleepSession,
+} from "./types.js";
 
 const H = 3_600_000;
 const M = 60_000;
@@ -63,6 +69,23 @@ const sleepGoogle: SleepSession = {
 apple.addNative(sleepApple);
 google.addNative(sleepGoogle);
 
+// Both devices also measured DISTANCE for the morning walk — same overlap
+// problem as steps, same fix.
+const dist = (source: SourceRef, start: number, end: number, m: number): CumulativeSample => ({
+  type: "cumulative", metric: "distance_m", source, start, end, value: m,
+});
+apple.addNative(dist(watch, day + 8 * H, day + 9 * H, 3200));
+google.addNative(dist(fitbit, day + 8 * H, day + 9 * H, 3350));
+
+// Heart rate: watch during the evening walk, fitbit overnight; and a smart
+// scale weigh-in that only Google knows about.
+const point = (source: SourceRef, at: number, metric: PointSample["metric"], v: number): PointSample => ({
+  type: "point", source, start: at, end: at, metric, value: v,
+});
+apple.addNative(point(watch, day + 18 * H + 10 * M, "heart_rate_bpm", 118));
+google.addNative(point(fitbit, day + 3 * H, "heart_rate_bpm", 52));
+google.addNative(point({ id: "withings-scale", name: "Bathroom scale", platform: "google" }, day + 7 * H + 30 * M, "weight_kg", 82.4));
+
 const range = { start: day - 2 * H, end: day + 24 * H };
 
 const rawApple = (await apple.read(range)).filter((r) => r.type === "steps");
@@ -95,6 +118,10 @@ for (const plan of report.plans) {
       console.log(`  + steps ${w.steps} @ ${when(w.start)}-${when(w.end)} (from ${w.source.name})`);
     } else if (w.type === "sleep") {
       console.log(`  + sleep ${when(w.start)}-${when(w.end)} (from ${w.source.name})`);
+    } else if (w.type === "cumulative") {
+      console.log(`  + ${w.metric} ${w.value} @ ${when(w.start)}-${when(w.end)} (from ${w.source.name})`);
+    } else if (w.type === "point") {
+      console.log(`  + ${w.metric} ${w.value} @ ${when(w.start)} (from ${w.source.name})`);
     }
   }
 }

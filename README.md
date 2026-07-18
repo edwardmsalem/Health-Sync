@@ -57,6 +57,20 @@ Two records of the same activity whose intervals overlap by more than
 `workoutOverlapThreshold` of the shorter one are the same workout; the
 higher-priority device's record is kept.
 
+### Everything else
+
+Steps and sleep are just the flagship cases — every metric class both
+platforms can represent is covered by one of three dedup engines:
+
+| Class | Metrics | Dedup |
+|---|---|---|
+| **Cumulative** (`CumulativeSample`) | distance, active/basal energy, floors climbed, elevation gained, exercise minutes, hydration, dietary energy, + any custom metric | Same minute-level source arbitration as steps, run independently per metric |
+| **Sessions** | sleep (with stages), workouts, and by extension mindfulness-style sessions | Interval clustering / overlap suppression |
+| **Point-in-time** (`PointSample`) | heart rate, resting HR, HRV, blood oxygen, respiratory rate, VO₂max, body temperature, weight, body fat, height, blood glucose, blood pressure, + any custom metric | A lower-priority device's reading is dropped when a better device has a reading of the same metric within `pointToleranceMs` (default 5 min); a device is never deduped against its own series |
+
+Metric names are open strings (with typed suggestions), so a bridge can pass
+through anything its platform supports without touching the engine.
+
 ## How the two-way sync stays safe
 
 Every sync run:
@@ -80,6 +94,21 @@ Every sync run:
 
 Native device records are **never modified or deleted** — only records this
 engine authored are ever touched.
+
+## Will both platforms show identical data?
+
+They converge on the **same activity timeline**: every walk, night, workout,
+and reading exists on both sides. Two honest caveats:
+
+1. **Contested overlap keeps its native measurement.** When both devices
+   measured the same minutes (Watch said 4,200 steps for the morning walk,
+   Fitbit said 4,350), each platform keeps its own device's number — this
+   engine never deletes or overwrites native device data, so those small
+   measurement disagreements survive on their home platform. Daily totals can
+   therefore differ by the devices' disagreement on co-worn periods only.
+2. **A platform can only store what it supports.** Data types with no
+   equivalent on the other side (e.g. Apple-only ECG waveforms) stay where
+   they were recorded; the bridges sync the (large) intersection.
 
 ## Usage
 
@@ -132,7 +161,7 @@ echo prevention.
 
 ```
 npm install
-npm test          # 27 tests covering overlap scenarios
+npm test          # 39 tests covering overlap scenarios
 npm run demo      # both-devices-worn walkthrough
 npm run typecheck
 ```
@@ -144,9 +173,12 @@ src/
   types.ts            normalized data model (steps, sleep, workouts, HR)
   config.ts           device priority + dedup thresholds
   dedup/
-    steps.ts          minute-level source arbitration
+    series.ts         generic minute-level arbitration core + gap trimming
+    steps.ts          steps (wraps series engine)
+    cumulative.ts     distance/calories/floors/... (wraps series engine per metric)
     sleep.ts          session clustering + fragment trimming
     workouts.ts       overlap suppression
+    points.ts         heart rate/weight/SpO2/... near-duplicate suppression
   sync/
     engine.ts         two-way sync: canonical timeline, gap-fill, staleness
     fingerprint.ts    content-addressed record identity

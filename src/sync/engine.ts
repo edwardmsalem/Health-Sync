@@ -21,8 +21,10 @@
  */
 
 import type {
+  CumulativeSample,
   HealthRecord,
   Platform,
+  PointSample,
   StepsSample,
   SleepSession,
   WorkoutRecord,
@@ -31,9 +33,12 @@ import type {
 import { isSyncAuthored, overlaps, SYNC_ORIGIN_PREFIX } from "../types.js";
 import type { HealthProvider } from "../providers/provider.js";
 import { DedupConfig, DEFAULT_DEDUP_CONFIG } from "../config.js";
-import { dedupeSteps, MINUTE_MS } from "../dedup/steps.js";
+import { dedupeSteps } from "../dedup/steps.js";
 import { dedupeSleep } from "../dedup/sleep.js";
 import { dedupeWorkouts, isDuplicateWorkout } from "../dedup/workouts.js";
+import { dedupeCumulative } from "../dedup/cumulative.js";
+import { dedupePoints } from "../dedup/points.js";
+import { coveredMinutes, trimToGaps } from "../dedup/series.js";
 import { fingerprint } from "./fingerprint.js";
 import type { SyncLedger } from "./ledger.js";
 import { InMemoryLedger } from "./ledger.js";
@@ -54,10 +59,20 @@ export interface PlatformPlan {
 export interface SyncReport {
   range: TimeRange;
   /** Canonical (deduped) record counts per type. */
-  canonical: { steps: number; sleepSessions: number; workouts: number };
+  canonical: {
+    steps: number;
+    sleepSessions: number;
+    workouts: number;
+    cumulative: number;
+    points: number;
+  };
   /** Steps double counting removed: raw sum minus deduped total. */
   stepsDoubleCountRemoved: number;
   sleepDoubleCountRemovedMs: number;
+  /** Per-metric double counting removed for other cumulative metrics. */
+  cumulativeDoubleCountRemoved: Record<string, number>;
+  /** Near-duplicate point readings (heart rate, weight, ...) suppressed. */
+  pointDuplicatesRemoved: number;
   plans: PlatformPlan[];
 }
 
@@ -71,52 +86,43 @@ export function fillStepGaps(
   canonical: StepsSample[],
   platformNative: StepsSample[],
 ): StepsSample[] {
-  const covered = new Set<number>();
-  for (const s of platformNative) {
-    if (s.end <= s.start) continue;
-    const first = Math.floor(s.start / MINUTE_MS);
-    const last = Math.floor((s.end - 1) / MINUTE_MS);
-    for (let m = first; m <= last; m++) covered.add(m);
-  }
+  const covered = coveredMinutes(platformNative);
+  return canonical.flatMap((sample) =>
+    trimToGaps(
+      { start: sample.start, end: sample.end, value: sample.steps, source: sample.source },
+      covered,
+    ).map((piece) => ({
+      ...sample,
+      start: piece.start,
+      end: piece.end,
+      steps: Math.round(piece.value),
+    })),
+  );
+}
 
-  const out: StepsSample[] = [];
-  for (const sample of canonical) {
-    const span = sample.end - sample.start;
-    if (span <= 0) continue;
-    const first = Math.floor(sample.start / MINUTE_MS);
-    const last = Math.floor((sample.end - 1) / MINUTE_MS);
-    const perMinute = sample.steps / ((last - first) + 1);
-    let run: { startMinute: number; endMinute: number; steps: number } | null =
-      null;
-    const flush = () => {
-      if (!run) return;
-      const steps = Math.round(run.steps);
-      if (steps > 0) {
-        out.push({
-          ...sample,
-          start: run.startMinute * MINUTE_MS,
-          end: (run.endMinute + 1) * MINUTE_MS,
-          steps,
-        });
-      }
-      run = null;
-    };
-    for (let m = first; m <= last; m++) {
-      if (covered.has(m)) {
-        flush();
-        continue;
-      }
-      if (run && m === run.endMinute + 1) {
-        run.endMinute = m;
-        run.steps += perMinute;
-      } else {
-        flush();
-        run = { startMinute: m, endMinute: m, steps: perMinute };
-      }
-    }
-    flush();
+/** Same gap-filling as steps, applied independently per cumulative metric. */
+export function fillCumulativeGaps(
+  canonical: CumulativeSample[],
+  platformNative: CumulativeSample[],
+): CumulativeSample[] {
+  const coveredByMetric = new Map<string, Set<number>>();
+  for (const metric of new Set(canonical.map((s) => s.metric))) {
+    coveredByMetric.set(
+      metric,
+      coveredMinutes(platformNative.filter((s) => s.metric === metric)),
+    );
   }
-  return out;
+  return canonical.flatMap((sample) =>
+    trimToGaps(
+      { start: sample.start, end: sample.end, value: sample.value, source: sample.source },
+      coveredByMetric.get(sample.metric)!,
+    ).map((piece) => ({
+      ...sample,
+      start: piece.start,
+      end: piece.end,
+      value: piece.value,
+    })),
+  );
 }
 
 export class SyncEngine {
@@ -181,11 +187,14 @@ export class SyncEngine {
       native.filter((r): r is WorkoutRecord => r.type === "workout"),
       this.config,
     );
-    const canonical: HealthRecord[] = [
-      ...steps.samples,
-      ...sleep.sessions,
-      ...workouts.workouts,
-    ];
+    const cumulative = dedupeCumulative(
+      native.filter((r): r is CumulativeSample => r.type === "cumulative"),
+      this.config,
+    );
+    const points = dedupePoints(
+      native.filter((r): r is PointSample => r.type === "point"),
+      this.config,
+    );
 
     // 4. Per-platform diff — GAP FILLING.
     //
@@ -209,6 +218,12 @@ export class SyncEngine {
           steps.samples,
           platformNative.filter((r): r is StepsSample => r.type === "steps"),
         ),
+        ...fillCumulativeGaps(
+          cumulative.samples,
+          platformNative.filter(
+            (r): r is CumulativeSample => r.type === "cumulative",
+          ),
+        ),
         ...sleep.sessions.filter(
           (s) =>
             !platformNative.some((n) => n.type === "sleep" && overlaps(n, s)),
@@ -219,6 +234,17 @@ export class SyncEngine {
               (n) =>
                 n.type === "workout" &&
                 isDuplicateWorkout(n, w, this.config.workoutOverlapThreshold),
+            ),
+        ),
+        // A point reading is only missing on this platform if it has no
+        // native reading of the same metric near that moment.
+        ...points.points.filter(
+          (p) =>
+            !platformNative.some(
+              (n) =>
+                n.type === "point" &&
+                n.metric === p.metric &&
+                Math.abs(n.start - p.start) <= this.config.pointToleranceMs,
             ),
         ),
       ];
@@ -269,9 +295,18 @@ export class SyncEngine {
         steps: steps.samples.length,
         sleepSessions: sleep.sessions.length,
         workouts: workouts.workouts.length,
+        cumulative: cumulative.samples.length,
+        points: points.points.length,
       },
       stepsDoubleCountRemoved: steps.rawTotal - steps.total,
       sleepDoubleCountRemovedMs: sleep.droppedMs,
+      cumulativeDoubleCountRemoved: Object.fromEntries(
+        Object.entries(cumulative.totals).map(([metric, t]) => [
+          metric,
+          Math.round((t.rawTotal - t.total) * 100) / 100,
+        ]),
+      ),
+      pointDuplicatesRemoved: points.dropped.length,
       plans,
     };
   }

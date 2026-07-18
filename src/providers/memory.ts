@@ -7,7 +7,7 @@
 
 import type { HealthProvider } from "./provider.js";
 import type { HealthRecord, Platform, TimeRange } from "../types.js";
-import { overlaps } from "../types.js";
+import { intersectsRange } from "../types.js";
 
 export class MemoryProvider implements HealthProvider {
   private records: HealthRecord[] = [];
@@ -29,7 +29,7 @@ export class MemoryProvider implements HealthProvider {
   }
 
   async read(range: TimeRange): Promise<HealthRecord[]> {
-    return this.records.filter((r) => overlaps(r, range));
+    return this.records.filter((r) => intersectsRange(r, range));
   }
 
   async write(records: HealthRecord[]): Promise<void> {
