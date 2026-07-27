@@ -10,6 +10,7 @@ This is a monorepo:
 |---|---|
 | [`packages/engine`](packages/engine) | The platform-agnostic sync + dedup engine (this README) — 39 tests |
 | [`apps/mobile`](apps/mobile) | The iOS app: HealthKit ⇄ Fitbit cloud, built on the engine — 22 tests, [setup guide](apps/mobile/README.md) |
+| [`apps/cadence`](apps/cadence) | Unrelated to the above: a SwiftUI calendar for iOS + macOS merging iCloud/Gmail calendars with Todoist — [setup guide](apps/cadence/README.md) |
 
 If you wear an Apple Watch and a Fitbit at the same time, both record the same
 walk and the same night's sleep. Naively merging the two platforms sums them
