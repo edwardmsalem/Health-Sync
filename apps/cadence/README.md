@@ -59,6 +59,27 @@ security theatre. The token is stored in the keychain and the client only ever
 sees a bearer token, so moving to OAuth later means replacing
 `TodoistCredentials` and nothing else.
 
+## TestFlight
+
+Same pipeline as SalemTriage — fastlane with match signing — but run locally,
+which is how SalemTriage actually ships (its GitHub CI never went green).
+
+```sh
+cd apps/cadence
+export MATCH_PASSWORD=...     # the match passphrase from the Trio/Triage setup
+fastlane ios ship             # build number from TestFlight, gym, upload
+```
+
+Lanes: `register` (one-time bundle-ID/app setup — note the app *record* itself
+can only be created with an Apple ID, Apple's API forbids it), `build`,
+`release`, `ship`. The App Store Connect API key is read from
+`~/.appstoreconnect/private_keys/`; CI can override via `FASTLANE_KEY` env.
+
+The first iOS builds ship **without CloudKit** — Apple's API cannot create
+iCloud containers (portal-only), so preferences stay on-device until the
+container is set up. The re-enable steps are written in
+`Cadence/Resources/Cadence-iOS.entitlements`.
+
 ## What is in here
 
 | Area | Files | Notes |

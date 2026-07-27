@@ -52,13 +52,17 @@ struct CloudKitSyncStore: SyncStore {
     static let containerIdentifier = "iCloud.com.salemseats.cadence"
 
     /// nil when the running binary lacks the CloudKit entitlement — an
-    /// unsigned local build, or the unit-test host. `CKContainer` *traps*
-    /// rather than throwing in that case (verified from a crash log:
-    /// EXC_BREAKPOINT inside `CKContainer.__allocating_init`), so it has to
-    /// be checked before the first touch, not caught after.
+    /// unsigned local build, the unit-test host, or an iOS build shipped
+    /// before the iCloud container exists. `CKContainer` *traps* rather than
+    /// throwing in that case (verified from a crash log: EXC_BREAKPOINT
+    /// inside `CKContainer.__allocating_init`), so it has to be checked
+    /// before the first touch, not caught after.
     ///
-    /// iOS builds are always code-signed with their entitlements embedded, so
-    /// the check only matters on macOS.
+    /// macOS checks the entitlement at runtime because local builds of the
+    /// same target may or may not be signed. iOS entitlements are fixed per
+    /// build, so there the gate is the CADENCE_CLOUDKIT compile flag, which
+    /// project.yml must set only when Cadence-iOS.entitlements carries the
+    /// iCloud keys — the flag and the entitlements file travel together.
     static func ifAvailable() -> CloudKitSyncStore? {
         #if os(macOS)
         let task = SecTaskCreateFromSelf(nil)
@@ -69,8 +73,12 @@ struct CloudKitSyncStore: SyncStore {
                 nil
               ) != nil
         else { return nil }
-        #endif
         return CloudKitSyncStore()
+        #elseif CADENCE_CLOUDKIT
+        return CloudKitSyncStore()
+        #else
+        return nil
+        #endif
     }
 
     private let recordType = "Preferences"

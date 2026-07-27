@@ -29,7 +29,10 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.salemseats.cadence
         PRODUCT_NAME: Cadence
         INFOPLIST_FILE: Cadence/Resources/Info.plist
-        CODE_SIGN_ENTITLEMENTS: Cadence/Resources/Cadence.entitlements
+        # Entitlements are split per platform: the macOS sandbox keys are
+        # invalid on iOS and fail App Store validation there.
+        "CODE_SIGN_ENTITLEMENTS[sdk=iphone*]": Cadence/Resources/Cadence-iOS.entitlements
+        "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": Cadence/Resources/Cadence-macOS.entitlements
         GENERATE_INFOPLIST_FILE: NO
         ENABLE_PREVIEWS: YES
         SWIFT_EMIT_LOC_STRINGS: YES
@@ -41,8 +44,11 @@ targets:
       configs:
         Debug:
           SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
-    entitlements:
-      path: Cadence/Resources/Cadence.entitlements
+      # CloudKit on iOS is gated by the CADENCE_CLOUDKIT compile flag, which
+      # must be set ONLY once the iCloud container exists and the iCloud keys
+      # are restored in Cadence-iOS.entitlements (see the note in that file).
+      # When that day comes, add here:
+      #   "SWIFT_ACTIVE_COMPILATION_CONDITIONS[sdk=iphone*]": "$(inherited) CADENCE_CLOUDKIT"
 
   CadenceTests:
     type: bundle.unit-test

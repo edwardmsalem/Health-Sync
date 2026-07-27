@@ -49,11 +49,11 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 
-	<!-- Background refresh so Todoist changes land before an alert fires. -->
+	<!-- Background refresh so Todoist changes land before an alert fires.
+	     No remote-notification mode: the app carries no push entitlement. -->
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>
-		<string>remote-notification</string>
 	</array>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
