@@ -66,6 +66,7 @@ sees a bearer token, so moving to OAuth later means replacing
 | Natural language | `NaturalLanguage/` | Quick-add parser. Fully unit tested. |
 | Calendars | `Calendar/` | EventKit access, enumeration, read and write. |
 | Tasks | `Todoist/` | v1 sync API, incremental `sync_token` merging. |
+| Task placement | `Todoist/TaskProjection.swift` | Which tasks appear and where. Unit tested. |
 | Layout | `Model/TimelineLayout.swift` | Overlap column-packing. Unit tested. |
 | Sync | `Sync/` | `SyncStore` protocol + CloudKit and local stores. |
 | Alerts | `Notifications/` | Local notifications for task blocks. |
@@ -108,9 +109,18 @@ notifications, capped under the 64-pending-notification limit iOS enforces.
 
 ### Tasks on the calendar
 
-Tasks with a due **time** render as blocks in the timeline. Tasks due on a date
-with no time have no position in a day, so they stay in Todoist rather than
-being parked at an arbitrary hour.
+Tasks with a due **time** render as blocks at that time. Tasks due on a **date
+with no time** are placed at a default hour — 9 AM out of the box, configurable
+in Settings → Todoist.
+
+Placing them means asserting a time the user never picked, so those blocks are
+drawn with a dashed edge, a lighter fill, and a "No time" label instead of a
+range. A dozen tasks defaulted to 9 AM should not read as a dozen real
+commitments. Changing the time in the detail view writes a real due time back
+to Todoist.
+
+There is no all-day row: a task is either a block or, if it has no due date at
+all, not on the calendar.
 
 ## Not done yet
 

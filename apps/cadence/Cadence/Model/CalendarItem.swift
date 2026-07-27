@@ -88,6 +88,11 @@ public struct CalendarItem: Identifiable, Equatable, Hashable {
     /// Tasks only. Todoist priority, 1 (highest) to 4 (default).
     public var priority: Int?
     public var url: URL?
+    /// True when this item's time was supplied by the app rather than by the
+    /// user — a Todoist task due on a date with no time, placed at the default
+    /// hour. Rendered slightly differently so a row of defaulted tasks is not
+    /// mistaken for a row of real commitments.
+    public var hasInferredTime: Bool
 
     public init(
         id: String,
@@ -104,7 +109,8 @@ public struct CalendarItem: Identifiable, Equatable, Hashable {
         isRecurring: Bool = false,
         isCompleted: Bool = false,
         priority: Int? = nil,
-        url: URL? = nil
+        url: URL? = nil,
+        hasInferredTime: Bool = false
     ) {
         self.id = id
         self.title = title
@@ -123,6 +129,7 @@ public struct CalendarItem: Identifiable, Equatable, Hashable {
         self.isCompleted = isCompleted
         self.priority = priority
         self.url = url
+        self.hasInferredTime = hasInferredTime
     }
 
     public var duration: TimeInterval { end.timeIntervalSince(start) }

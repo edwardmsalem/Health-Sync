@@ -142,7 +142,8 @@ final class AppModel: ObservableObject {
         if preferences.showTodoistTasks {
             merged += todoist.calendarItems(
                 in: window,
-                includeCompleted: preferences.showCompletedTasks
+                includeCompleted: preferences.showCompletedTasks,
+                dateOnlyHour: preferences.dateOnlyTaskHour
             )
         }
 

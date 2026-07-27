@@ -198,13 +198,22 @@ struct SettingsView: View {
                 .font(.caption)
             }
 
+            Picker("Tasks with no time", selection: Binding(
+                get: { model.preferences.dateOnlyTaskHour },
+                set: { value in model.preferencesController.update { $0.dateOnlyTaskHour = value } }
+            )) {
+                ForEach(0..<24, id: \.self) { hour in
+                    Text(HourGutter.hourLabel(for: hour)).tag(hour)
+                }
+            }
+
             if let error = connectionError ?? model.todoist.lastErrorMessage {
                 Text(error).font(.caption).foregroundStyle(.red)
             }
         } header: {
             Label("Todoist", systemImage: "checklist")
         } footer: {
-            Text("Tasks with a due time appear as blocks on the calendar. Tasks due on a date with no time stay in Todoist.")
+            Text("A task due at a specific time appears at that time. A task due on a date with no time is placed at the hour above, drawn with a dashed edge so you can tell it apart from a real commitment.")
         }
     }
 

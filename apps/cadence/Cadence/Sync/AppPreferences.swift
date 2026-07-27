@@ -48,6 +48,12 @@ public struct AppPreferences: Codable, Equatable, Sendable {
     /// Applied to events created through quick add when the text names none.
     public var defaultAlerts: [AlertOffset]
     public var defaultCalendarID: String?
+    /// Hour of day a Todoist task due on a date with no time is drawn at.
+    ///
+    /// Such a task has no position of its own in a timeline, so it is given
+    /// one rather than being hidden — that way it is visible, and it gets an
+    /// alert like anything else on the calendar.
+    public var dateOnlyTaskHour: Int
     /// Last-writer-wins discriminator for the CloudKit merge.
     public var updatedAt: Date
 
@@ -61,6 +67,7 @@ public struct AppPreferences: Codable, Equatable, Sendable {
         preferredDayStartHour: Int = 8,
         defaultAlerts: [AlertOffset] = [.fifteenMinutes],
         defaultCalendarID: String? = nil,
+        dateOnlyTaskHour: Int = 9,
         updatedAt: Date = Date()
     ) {
         self.hiddenCalendarIDs = hiddenCalendarIDs
@@ -72,7 +79,34 @@ public struct AppPreferences: Codable, Equatable, Sendable {
         self.preferredDayStartHour = preferredDayStartHour
         self.defaultAlerts = defaultAlerts
         self.defaultCalendarID = defaultCalendarID
+        self.dateOnlyTaskHour = min(max(dateOnlyTaskHour, 0), 23)
         self.updatedAt = updatedAt
+    }
+
+    /// Decoded field by field with fallbacks rather than relying on the
+    /// synthesised initialiser.
+    ///
+    /// Swift's synthesised `Decodable` ignores default property values and
+    /// fails on any missing key, so adding a preference would otherwise make
+    /// every previously stored blob — on disk *and* in CloudKit — undecodable,
+    /// silently resetting the user's settings on upgrade.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        self.hiddenCalendarIDs = try container.decodeIfPresent(Set<String>.self, forKey: .hiddenCalendarIDs) ?? []
+        self.calendarColorOverrides = try container.decodeIfPresent([String: String].self, forKey: .calendarColorOverrides) ?? [:]
+        self.defaultViewMode = try container.decodeIfPresent(CalendarViewMode.self, forKey: .defaultViewMode) ?? .month
+        self.showTodoistTasks = try container.decodeIfPresent(Bool.self, forKey: .showTodoistTasks) ?? true
+        self.showCompletedTasks = try container.decodeIfPresent(Bool.self, forKey: .showCompletedTasks) ?? false
+        self.firstWeekday = try container.decodeIfPresent(Int.self, forKey: .firstWeekday) ?? 1
+        self.preferredDayStartHour = try container.decodeIfPresent(Int.self, forKey: .preferredDayStartHour) ?? 8
+        self.defaultAlerts = try container.decodeIfPresent([AlertOffset].self, forKey: .defaultAlerts) ?? [.fifteenMinutes]
+        self.defaultCalendarID = try container.decodeIfPresent(String.self, forKey: .defaultCalendarID)
+        let hour = try container.decodeIfPresent(Int.self, forKey: .dateOnlyTaskHour) ?? 9
+        self.dateOnlyTaskHour = min(max(hour, 0), 23)
+        // `.distantPast` so a blob written before this field existed always
+        // loses the last-writer-wins comparison against a freshly saved one.
+        self.updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? .distantPast
     }
 
     public static let `default` = AppPreferences()

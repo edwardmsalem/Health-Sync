@@ -55,7 +55,7 @@ struct EventDetailView: View {
                     }
                 }
 
-                Section("When") {
+                Section {
                     if !isTask {
                         Toggle("All day", isOn: $isAllDay)
                     }
@@ -68,6 +68,12 @@ struct EventDetailView: View {
 
                     if !isTask && !isAllDay {
                         DatePicker("Ends", selection: $end, in: start..., displayedComponents: [.date, .hourAndMinute])
+                    }
+                } header: {
+                    Text("When")
+                } footer: {
+                    if item.hasInferredTime {
+                        Text("This task is due on a date with no time, so it is shown at your default hour. Changing the time here sets a real due time in Todoist.")
                     }
                 }
 

@@ -218,58 +218,27 @@ final class TodoistStore: ObservableObject {
 
     // MARK: - Projection onto the calendar
 
-    /// Tasks that carry a due *time*, as blocks on the grid.
+    /// Due tasks as blocks on the grid.
     ///
-    /// Date-only tasks are deliberately excluded: they have no position in a
-    /// timeline, so they live in the task list instead.
+    /// Tasks due on a date with no time are placed at `dateOnlyHour` rather
+    /// than hidden — see `TaskProjection` for the rules, which live there so
+    /// they are testable without a network or a keychain.
     func calendarItems(
         in interval: DateInterval,
-        includeCompleted: Bool
+        includeCompleted: Bool,
+        dateOnlyHour: Int
     ) -> [CalendarItem] {
-        itemsByID.values.compactMap { item -> CalendarItem? in
-            guard !item.isRemoved else { return nil }
-            guard includeCompleted || !item.isCompleted else { return nil }
-            guard let due = item.due,
-                  let resolved = TodoistDueParser.resolve(due, calendar: calendar),
-                  resolved.hasTime
-            else { return nil }
-
-            let start = resolved.start
-            let end = start.addingTimeInterval(item.duration?.timeInterval ?? Self.defaultTaskDuration)
-            guard start < interval.end, end > interval.start else { return nil }
-
-            let project = item.projectID.flatMap { projectsByID[$0] }
-
-            return CalendarItem(
-                id: "todoist:\(item.id)",
-                title: item.content,
-                notes: item.description,
-                start: start,
-                end: end,
-                isAllDay: false,
-                origin: .task(todoistID: item.id),
-                containerTitle: project?.name ?? "Todoist",
-                colorHex: project?.colorHex ?? TodoistPalette.fallback,
-                isRecurring: due.isRecurring ?? false,
-                isCompleted: item.isCompleted,
-                priority: item.displayPriority
+        TaskProjection.calendarItems(
+            items: Array(itemsByID.values),
+            projects: projectsByID,
+            in: interval,
+            calendar: calendar,
+            options: TaskProjection.Options(
+                includeCompleted: includeCompleted,
+                dateOnlyHour: dateOnlyHour,
+                defaultDuration: Self.defaultTaskDuration
             )
-        }
-    }
-
-    /// Tasks due on a given day with no time attached, for the task list.
-    func dateOnlyTasks(on day: Date, includeCompleted: Bool) -> [TodoistItem] {
-        itemsByID.values
-            .filter { item in
-                guard !item.isRemoved else { return false }
-                guard includeCompleted || !item.isCompleted else { return false }
-                guard let due = item.due,
-                      let resolved = TodoistDueParser.resolve(due, calendar: calendar),
-                      !resolved.hasTime
-                else { return false }
-                return calendar.isDate(resolved.start, inSameDayAs: day)
-            }
-            .sorted { $0.displayPriority < $1.displayPriority }
+        )
     }
 
     func project(for item: TodoistItem) -> TodoistProject? {

@@ -30,9 +30,16 @@ struct EventChip: View {
                     .strikethrough(item.isCompleted, color: color.opacity(0.7))
 
                 if showsDetail {
-                    Text(DateFormat.compactTime.string(from: item.start))
-                        .font(Theme.Typography.chipDetail)
-                        .opacity(0.75)
+                    HStack(spacing: 3) {
+                        Text(DateFormat.compactTime.string(from: item.start))
+                        if item.hasInferredTime {
+                            // The time is the app's guess, not the user's.
+                            Image(systemName: "questionmark.circle")
+                                .font(.system(size: 8, weight: .semibold))
+                        }
+                    }
+                    .font(Theme.Typography.chipDetail)
+                    .opacity(0.75)
                 }
             }
 
@@ -42,11 +49,20 @@ struct EventChip: View {
         .padding(.vertical, 3)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .foregroundStyle(color)
-        .background(color.opacity(0.16))
+        .background(color.opacity(item.hasInferredTime ? 0.09 : 0.16))
         .overlay(alignment: .leading) {
             Rectangle().fill(color).frame(width: 2.5)
         }
         .clipShape(RoundedRectangle(cornerRadius: Theme.Metrics.chipCornerRadius, style: .continuous))
+        .overlay {
+            // A dashed outline marks a block whose time the app supplied, so a
+            // stack of defaulted tasks does not read as a stack of real
+            // commitments.
+            if item.hasInferredTime {
+                RoundedRectangle(cornerRadius: Theme.Metrics.chipCornerRadius, style: .continuous)
+                    .strokeBorder(color.opacity(0.55), style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
+            }
+        }
         .opacity(item.isCompleted ? 0.55 : 1)
         .contentShape(Rectangle())
     }
@@ -90,7 +106,13 @@ struct AgendaRow: View {
                 }
 
                 HStack(spacing: 6) {
-                    Text(DateFormat.range(item))
+                    // Saying "no time" is more honest than showing a range the
+                    // user never chose.
+                    Text(
+                        item.hasInferredTime
+                            ? "No time · \(DateFormat.time.string(from: item.start))"
+                            : DateFormat.range(item)
+                    )
                     Text("·")
                     Text(item.containerTitle)
                     if let location = item.location, !location.isEmpty {
