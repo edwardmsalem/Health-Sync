@@ -4,11 +4,28 @@ struct RootView: View {
     @EnvironmentObject private var model: AppModel
 
     var body: some View {
+        #if os(macOS)
+        // Readdle's Mac layout: a sidebar carrying the calendar list with
+        // colored checkboxes, the calendar surface filling the rest.
+        NavigationSplitView {
+            CalendarSidebar()
+                .navigationSplitViewColumnWidth(min: 210, ideal: 240, max: 320)
+        } detail: {
+            mainContent
+        }
+        .modifier(SharedSheets())
+        #else
+        mainContent
+            .modifier(SharedSheets())
+        #endif
+    }
+
+    private var mainContent: some View {
         VStack(spacing: 0) {
             header
             Divider()
 
-            if model.eventStore.hasFullAccess {
+            if model.eventStore.hasFullAccess || model.isSampleMode {
                 content
             } else {
                 CalendarAccessGate()
@@ -20,36 +37,59 @@ struct RootView: View {
             quickAddButton
             #endif
         }
-        .sheet(isPresented: $model.isPresentingQuickAdd) {
-            QuickAddView().environmentObject(model)
-        }
-        .sheet(item: $model.editingItem) { item in
-            EventDetailView(item: item).environmentObject(model)
-        }
-        .sheet(isPresented: $model.isPresentingSettings) {
-            SettingsView().environmentObject(model)
-        }
-        .alert(
-            "Something went wrong",
-            isPresented: Binding(
-                get: { model.errorMessage != nil },
-                set: { if !$0 { model.errorMessage = nil } }
-            )
-        ) {
-            Button("OK", role: .cancel) { model.errorMessage = nil }
-        } message: {
-            Text(model.errorMessage ?? "")
-        }
     }
 
     // MARK: - Header
 
     private var header: some View {
+        #if os(macOS)
+        HStack(spacing: 14) {
+            monthTitle
+
+            Button { step(-1) } label: { Image(systemName: "chevron.left") }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Previous")
+
+            Button("Today") { withAnimation { model.goToToday() } }
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.accentColor)
+                .buttonStyle(.plain)
+
+            Button { step(1) } label: { Image(systemName: "chevron.right") }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Next")
+
+            Spacer()
+
+            Picker("View", selection: viewModeBinding) {
+                ForEach(CalendarViewMode.allCases) { mode in
+                    Text(mode.title).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(width: 300)
+
+            Button { model.isPresentingQuickAdd = true } label: {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 22))
+                    .foregroundStyle(Color.accentColor)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Quick add")
+
+            Button { model.isPresentingSettings = true } label: {
+                Image(systemName: "gearshape")
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Settings")
+        }
+        .padding(.horizontal, Theme.Metrics.horizontalPadding)
+        .padding(.vertical, 10)
+        #else
         VStack(spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text(DateFormat.monthYear.string(from: model.anchorMonth))
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .contentTransition(.numericText())
+                monthTitle
 
                 Spacer()
 
@@ -59,19 +99,12 @@ struct RootView: View {
 
                 Button("Today") { withAnimation { model.goToToday() } }
                     .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.accentColor)
                     .buttonStyle(.plain)
 
                 Button { step(1) } label: { Image(systemName: "chevron.right") }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Next")
-
-                #if os(macOS)
-                Button { model.isPresentingQuickAdd = true } label: {
-                    Image(systemName: "plus")
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Quick add")
-                #endif
 
                 Button { model.isPresentingSettings = true } label: {
                     Image(systemName: "gearshape")
@@ -92,6 +125,19 @@ struct RootView: View {
         .padding(.horizontal, Theme.Metrics.horizontalPadding)
         .padding(.top, 10)
         .padding(.bottom, 10)
+        #endif
+    }
+
+    /// "July" heavy, "2026" light — the Readdle title treatment.
+    private var monthTitle: some View {
+        HStack(spacing: 6) {
+            Text(DateFormat.monthOnly.string(from: model.anchorMonth))
+                .font(.system(size: 24, weight: .bold))
+            Text(DateFormat.yearOnly.string(from: model.anchorMonth))
+                .font(.system(size: 24, weight: .light))
+                .foregroundStyle(.secondary)
+        }
+        .contentTransition(.numericText())
     }
 
     private var viewModeBinding: Binding<CalendarViewMode> {
@@ -143,6 +189,35 @@ struct RootView: View {
         .accessibilityLabel("Quick add")
     }
     #endif
+}
+
+/// The sheets and the error alert, shared by both platform layouts.
+private struct SharedSheets: ViewModifier {
+    @EnvironmentObject private var model: AppModel
+
+    func body(content: Content) -> some View {
+        content
+            .sheet(isPresented: $model.isPresentingQuickAdd) {
+                QuickAddView().environmentObject(model)
+            }
+            .sheet(item: $model.editingItem) { item in
+                EventDetailView(item: item).environmentObject(model)
+            }
+            .sheet(isPresented: $model.isPresentingSettings) {
+                SettingsView().environmentObject(model)
+            }
+            .alert(
+                "Something went wrong",
+                isPresented: Binding(
+                    get: { model.errorMessage != nil },
+                    set: { if !$0 { model.errorMessage = nil } }
+                )
+            ) {
+                Button("OK", role: .cancel) { model.errorMessage = nil }
+            } message: {
+                Text(model.errorMessage ?? "")
+            }
+    }
 }
 
 /// Shown until EventKit access is granted. Without it there is nothing to draw,

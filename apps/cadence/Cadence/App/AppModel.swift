@@ -70,6 +70,13 @@ final class AppModel: ObservableObject {
         await preferencesController.start()
         viewMode = preferences.defaultViewMode
 
+        // Fixture mode renders canned data only — permission prompts would
+        // just sit on top of the screenshots.
+        guard !isSampleMode else {
+            reload()
+            return
+        }
+
         await eventStore.requestAccess()
         await alerts.refreshAuthorizationStatus()
         if alerts.authorizationStatus == .notDetermined {
@@ -112,6 +119,16 @@ final class AppModel: ObservableObject {
 
     // MARK: - Loading
 
+    /// Debug screenshot mode: fixture items instead of live EventKit/Todoist,
+    /// so simulators (which have empty calendars) can show the real design.
+    var isSampleMode: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.environment["CADENCE_SAMPLE_DATA"] == "1"
+        #else
+        false
+        #endif
+    }
+
     /// Rebuilds the day buckets for the visible window.
     ///
     /// The window is the displayed month plus a month either side, which covers
@@ -121,6 +138,13 @@ final class AppModel: ObservableObject {
         let window = loadWindow()
         isLoading = true
         defer { isLoading = false }
+
+        #if DEBUG
+        if isSampleMode {
+            itemsByDay = bucket(SampleData.items(around: anchorMonth, calendar: calendar), in: window)
+            return
+        }
+        #endif
 
         let visibleCalendarIDs = Set(
             eventStore.calendars

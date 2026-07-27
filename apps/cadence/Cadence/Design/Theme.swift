@@ -119,6 +119,20 @@ enum DateFormat {
         return formatter
     }()
 
+    // Split month/year formatters: the header sets "July" bold and "2026"
+    // light, which one combined string cannot do.
+    static let monthOnly: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("MMMM")
+        return formatter
+    }()
+
+    static let yearOnly: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("yyyy")
+        return formatter
+    }()
+
     static let weekdayLong: DateFormatter = {
         let formatter = DateFormatter()
         formatter.setLocalizedDateFormatFromTemplate("EEEE d MMMM")
