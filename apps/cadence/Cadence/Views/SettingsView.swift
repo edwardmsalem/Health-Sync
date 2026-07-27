@@ -313,7 +313,9 @@ struct SettingsView: View {
             HStack {
                 Label("iCloud", systemImage: "icloud")
                 Spacer()
-                if let message = model.preferencesController.cloudStatusMessage {
+                if !model.preferencesController.isCloudAvailable {
+                    Text("Unavailable in this build").font(.caption).foregroundStyle(.secondary)
+                } else if let message = model.preferencesController.cloudStatusMessage {
                     Text(message).font(.caption).foregroundStyle(.orange).multilineTextAlignment(.trailing)
                 } else {
                     Text("Synced").font(.caption).foregroundStyle(.secondary)
@@ -322,7 +324,11 @@ struct SettingsView: View {
         } header: {
             Label("Sync", systemImage: "arrow.triangle.2.circlepath")
         } footer: {
-            Text("Your settings sync between your Apple devices through iCloud. Events and tasks sync through their own accounts, so they are already up to date everywhere.")
+            if model.preferencesController.isCloudAvailable {
+                Text("Your settings sync between your Apple devices through iCloud. Events and tasks sync through their own accounts, so they are already up to date everywhere.")
+            } else {
+                Text("Settings stay on this device. iCloud sync needs a build signed with a development team — set DEVELOPMENT_TEAM and regenerate the project. Events and tasks still sync through their own accounts.")
+            }
         }
     }
 }

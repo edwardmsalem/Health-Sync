@@ -43,16 +43,19 @@ final class AppModel: ObservableObject {
         return calendar
     }
 
+    // Defaults are built in the body rather than as default arguments: default
+    // argument expressions evaluate in a nonisolated context, so they cannot
+    // call these types' @MainActor initialisers.
     init(
-        eventStore: EventStoreService = EventStoreService(),
-        todoist: TodoistStore = TodoistStore(),
-        preferencesController: PreferencesController = PreferencesController(),
-        alerts: AlertScheduler = AlertScheduler()
+        eventStore: EventStoreService? = nil,
+        todoist: TodoistStore? = nil,
+        preferencesController: PreferencesController? = nil,
+        alerts: AlertScheduler? = nil
     ) {
-        self.eventStore = eventStore
-        self.todoist = todoist
-        self.preferencesController = preferencesController
-        self.alerts = alerts
+        self.eventStore = eventStore ?? EventStoreService()
+        self.todoist = todoist ?? TodoistStore()
+        self.preferencesController = preferencesController ?? PreferencesController()
+        self.alerts = alerts ?? AlertScheduler()
 
         let today = Calendar.autoupdatingCurrent.startOfDay(for: Date())
         self.selectedDate = today

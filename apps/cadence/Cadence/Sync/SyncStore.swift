@@ -1,5 +1,8 @@
 import Foundation
 import CloudKit
+#if os(macOS)
+import Security
+#endif
 
 /// Where preferences live between devices.
 ///
@@ -48,6 +51,28 @@ struct LocalSyncStore: SyncStore {
 struct CloudKitSyncStore: SyncStore {
     static let containerIdentifier = "iCloud.com.salemseats.cadence"
 
+    /// nil when the running binary lacks the CloudKit entitlement — an
+    /// unsigned local build, or the unit-test host. `CKContainer` *traps*
+    /// rather than throwing in that case (verified from a crash log:
+    /// EXC_BREAKPOINT inside `CKContainer.__allocating_init`), so it has to
+    /// be checked before the first touch, not caught after.
+    ///
+    /// iOS builds are always code-signed with their entitlements embedded, so
+    /// the check only matters on macOS.
+    static func ifAvailable() -> CloudKitSyncStore? {
+        #if os(macOS)
+        let task = SecTaskCreateFromSelf(nil)
+        guard let task,
+              SecTaskCopyValueForEntitlement(
+                task,
+                "com.apple.developer.icloud-services" as CFString,
+                nil
+              ) != nil
+        else { return nil }
+        #endif
+        return CloudKitSyncStore()
+    }
+
     private let recordType = "Preferences"
     private let recordID = CKRecord.ID(recordName: "preferences")
 
@@ -95,7 +120,11 @@ final class PreferencesController: ObservableObject {
     private let remote: SyncStore?
     private var pushTask: Task<Void, Never>?
 
-    init(local: SyncStore = LocalSyncStore(), remote: SyncStore? = CloudKitSyncStore()) {
+    /// False when this build cannot reach iCloud (no CloudKit entitlement);
+    /// preferences then stay device-local.
+    var isCloudAvailable: Bool { remote != nil }
+
+    init(local: SyncStore = LocalSyncStore(), remote: SyncStore? = CloudKitSyncStore.ifAvailable()) {
         self.local = local
         self.remote = remote
     }

@@ -55,6 +55,9 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.salemseats.cadence.tests
         GENERATE_INFOPLIST_FILE: YES
+        # XcodeGen writes the iOS-layout TEST_HOST for both platforms, but a
+        # macOS bundle keeps its binary under Contents/MacOS.
+        "TEST_HOST[sdk=macosx*]": "$(BUILT_PRODUCTS_DIR)/Cadence.app/Contents/MacOS/Cadence"
 
 schemes:
   Cadence:
