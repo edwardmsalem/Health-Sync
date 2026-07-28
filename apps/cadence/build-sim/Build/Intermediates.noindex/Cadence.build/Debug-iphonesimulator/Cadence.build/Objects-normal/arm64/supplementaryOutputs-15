@@ -1,0 +1,23 @@
+{
+  "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/Cadence/NaturalLanguage/NaturalLanguageParser.swift" : {
+    "const-values" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/NaturalLanguageParser.swiftconstvalues",
+    "dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/NaturalLanguageParser.d",
+    "diagnostics" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/NaturalLanguageParser.dia",
+    "object" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/NaturalLanguageParser.o",
+    "swift-dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/NaturalLanguageParser.swiftdeps"
+  },
+  "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/Cadence/NaturalLanguage/ParsedInput.swift" : {
+    "const-values" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/ParsedInput.swiftconstvalues",
+    "dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/ParsedInput.d",
+    "diagnostics" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/ParsedInput.dia",
+    "object" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/ParsedInput.o",
+    "swift-dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/ParsedInput.swiftdeps"
+  },
+  "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/Cadence/Views/MonthView.swift" : {
+    "const-values" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/MonthView.swiftconstvalues",
+    "dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/MonthView.d",
+    "diagnostics" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/MonthView.dia",
+    "object" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/MonthView.o",
+    "swift-dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/MonthView.swiftdeps"
+  }
+}

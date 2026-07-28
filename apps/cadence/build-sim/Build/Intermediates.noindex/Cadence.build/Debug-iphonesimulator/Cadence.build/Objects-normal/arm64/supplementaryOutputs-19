@@ -1,0 +1,23 @@
+{
+  "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/Cadence/Todoist/TodoistClient.swift" : {
+    "const-values" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TodoistClient.swiftconstvalues",
+    "dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TodoistClient.d",
+    "diagnostics" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TodoistClient.dia",
+    "object" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TodoistClient.o",
+    "swift-dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TodoistClient.swiftdeps"
+  },
+  "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/Cadence/Todoist/TodoistCredentials.swift" : {
+    "const-values" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TodoistCredentials.swiftconstvalues",
+    "dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TodoistCredentials.d",
+    "diagnostics" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TodoistCredentials.dia",
+    "object" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TodoistCredentials.o",
+    "swift-dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TodoistCredentials.swiftdeps"
+  },
+  "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/Cadence/Views/TimelineViews.swift" : {
+    "const-values" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TimelineViews.swiftconstvalues",
+    "dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TimelineViews.d",
+    "diagnostics" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TimelineViews.dia",
+    "object" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TimelineViews.o",
+    "swift-dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TimelineViews.swiftdeps"
+  }
+}

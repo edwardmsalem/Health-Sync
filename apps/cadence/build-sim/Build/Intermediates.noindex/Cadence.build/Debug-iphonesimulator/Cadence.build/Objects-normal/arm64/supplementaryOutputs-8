@@ -1,0 +1,23 @@
+{
+  "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/Cadence/Design/Theme.swift" : {
+    "const-values" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/Theme.swiftconstvalues",
+    "dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/Theme.d",
+    "diagnostics" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/Theme.dia",
+    "object" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/Theme.o",
+    "swift-dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/Theme.swiftdeps"
+  },
+  "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/Cadence/Model/TimelineLayout.swift" : {
+    "const-values" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TimelineLayout.swiftconstvalues",
+    "dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TimelineLayout.d",
+    "diagnostics" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TimelineLayout.dia",
+    "object" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TimelineLayout.o",
+    "swift-dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TimelineLayout.swiftdeps"
+  },
+  "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/Cadence/NaturalLanguage/TextCanvas.swift" : {
+    "const-values" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TextCanvas.swiftconstvalues",
+    "dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TextCanvas.d",
+    "diagnostics" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TextCanvas.dia",
+    "object" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TextCanvas.o",
+    "swift-dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/TextCanvas.swiftdeps"
+  }
+}

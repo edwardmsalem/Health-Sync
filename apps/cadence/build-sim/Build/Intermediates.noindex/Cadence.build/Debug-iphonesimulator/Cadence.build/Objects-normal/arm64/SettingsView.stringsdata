@@ -1,0 +1,280 @@
+{
+  "source": "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/Cadence/Views/SettingsView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Settings",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 40
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 42
+        }
+      },
+      {
+        "comment": "",
+        "key": "This calendar is read-only",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 101
+        }
+      },
+      {
+        "comment": "",
+        "key": "Use calendar color",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 75
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ · %@",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 107
+        }
+      },
+      {
+        "comment": "",
+        "key": "No calendars found. Add your accounts in system Settings and they will appear here.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 115
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sync now",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 172
+        }
+      },
+      {
+        "comment": "",
+        "key": "Disconnect",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 176
+        }
+      },
+      {
+        "comment": "",
+        "key": "Todoist API token",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 181
+        }
+      },
+      {
+        "comment": "",
+        "key": "Get your token from Todoist settings",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 195
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tasks with no time",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 201
+        }
+      },
+      {
+        "comment": "",
+        "key": "Connected",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 154
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tasks",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 167
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 169
+        }
+      },
+      {
+        "comment": "",
+        "key": "Connect",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 189
+        }
+      },
+      {
+        "comment": "",
+        "key": "Todoist",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 214
+        }
+      },
+      {
+        "comment": "",
+        "key": "A task due at a specific time appears at that time. A task due on a date with no time is placed at the hour above, drawn with a dashed edge so you can tell it apart from a real commitment.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 216
+        }
+      },
+      {
+        "comment": "",
+        "key": "Enable notifications",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 242
+        }
+      },
+      {
+        "comment": "",
+        "key": "Alerts",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 251
+        }
+      },
+      {
+        "comment": "",
+        "key": "Applied to new events you create and to Todoist task blocks. Alerts already set on an existing event are left alone.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 253
+        }
+      },
+      {
+        "comment": "",
+        "key": "Show Todoist tasks",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 277
+        }
+      },
+      {
+        "comment": "",
+        "key": "Show completed tasks",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 282
+        }
+      },
+      {
+        "comment": "",
+        "key": "Week starts on",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 287
+        }
+      },
+      {
+        "comment": "",
+        "key": "Day starts at",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 296
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sunday",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 291
+        }
+      },
+      {
+        "comment": "",
+        "key": "Monday",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 292
+        }
+      },
+      {
+        "comment": "",
+        "key": "Saturday",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 293
+        }
+      },
+      {
+        "comment": "",
+        "key": "Display",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 305
+        }
+      },
+      {
+        "comment": "",
+        "key": "Unavailable in this build",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 317
+        }
+      },
+      {
+        "comment": "",
+        "key": "Synced",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 321
+        }
+      },
+      {
+        "comment": "",
+        "key": "iCloud",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 314
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sync",
+        "location": {
+          "startingColumn": 19,
+          "startingLine": 325
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your settings sync between your Apple devices through iCloud. Events and tasks sync through their own accounts, so they are already up to date everywhere.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 328
+        }
+      },
+      {
+        "comment": "",
+        "key": "Settings stay on this device. iCloud sync needs a build signed with a development team — set DEVELOPMENT_TEAM and regenerate the project. Events and tasks still sync through their own accounts.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 330
+        }
+      }
+    ]
+  },
+  "version": 1
+}

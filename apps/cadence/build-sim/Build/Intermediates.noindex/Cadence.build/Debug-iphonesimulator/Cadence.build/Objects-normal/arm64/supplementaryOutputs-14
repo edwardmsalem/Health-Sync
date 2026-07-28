@@ -1,0 +1,23 @@
+{
+  "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/Cadence/Calendar/EventStoreService.swift" : {
+    "const-values" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/EventStoreService.swiftconstvalues",
+    "dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/EventStoreService.d",
+    "diagnostics" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/EventStoreService.dia",
+    "object" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/EventStoreService.o",
+    "swift-dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/EventStoreService.swiftdeps"
+  },
+  "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/Cadence/Views/EventDetailView.swift" : {
+    "const-values" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/EventDetailView.swiftconstvalues",
+    "dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/EventDetailView.d",
+    "diagnostics" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/EventDetailView.dia",
+    "object" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/EventDetailView.o",
+    "swift-dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/EventDetailView.swiftdeps"
+  },
+  "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/Cadence/Views/ItemViews.swift" : {
+    "const-values" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/ItemViews.swiftconstvalues",
+    "dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/ItemViews.d",
+    "diagnostics" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/ItemViews.dia",
+    "object" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/ItemViews.o",
+    "swift-dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/ItemViews.swiftdeps"
+  }
+}

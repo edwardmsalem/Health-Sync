@@ -1,0 +1,23 @@
+{
+  "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/Cadence/Model/RecurrenceSpec.swift" : {
+    "const-values" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/RecurrenceSpec.swiftconstvalues",
+    "dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/RecurrenceSpec.d",
+    "diagnostics" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/RecurrenceSpec.dia",
+    "object" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/RecurrenceSpec.o",
+    "swift-dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/RecurrenceSpec.swiftdeps"
+  },
+  "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/Cadence/Views/QuickAddView.swift" : {
+    "const-values" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/QuickAddView.swiftconstvalues",
+    "dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/QuickAddView.d",
+    "diagnostics" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/QuickAddView.dia",
+    "object" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/QuickAddView.o",
+    "swift-dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/QuickAddView.swiftdeps"
+  },
+  "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/Cadence/Views/RootView.swift" : {
+    "const-values" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/RootView.swiftconstvalues",
+    "dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/RootView.d",
+    "diagnostics" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/RootView.dia",
+    "object" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/RootView.o",
+    "swift-dependencies" : "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/build-sim/Build/Intermediates.noindex/Cadence.build/Debug-iphonesimulator/Cadence.build/Objects-normal/arm64/RootView.swiftdeps"
+  }
+}

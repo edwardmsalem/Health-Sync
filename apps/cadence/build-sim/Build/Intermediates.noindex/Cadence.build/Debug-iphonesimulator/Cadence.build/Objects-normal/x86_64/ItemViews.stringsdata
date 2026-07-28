@@ -1,0 +1,40 @@
+{
+  "source": "/Users/edwardsalem/Desktop/GitHub/Health-Sync/apps/cadence/Cadence/Views/ItemViews.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Mark incomplete",
+        "location": {
+          "startingColumn": 64,
+          "startingLine": 93
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mark complete",
+        "location": {
+          "startingColumn": 84,
+          "startingLine": 93
+        }
+      },
+      {
+        "comment": "",
+        "key": "·",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 116
+        }
+      },
+      {
+        "comment": "",
+        "key": "·",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 119
+        }
+      }
+    ]
+  },
+  "version": 1
+}

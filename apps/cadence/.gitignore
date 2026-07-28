@@ -1,9 +1,0 @@
-*.xcodeproj/
-*.xcworkspace/
-!*.xcodeproj/project.pbxproj.keep
-.DS_Store
-DerivedData/
-build/
-*.xcuserstate
-xcuserdata/
-Secrets.xcconfig
