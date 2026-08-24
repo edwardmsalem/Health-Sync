@@ -17,9 +17,9 @@
         "ITSAppUsesNonExemptEncryption": false
       },
       "entitlements": {
-        "com.apple.developer.healthkit": true,
-        "com.apple.developer.healthkit.background-delivery": true
-      }
+        "com.apple.developer.healthkit": true
+      },
+      "buildNumber": "1"
     },
     "extra": {
       "fitbitClientId": "REPLACE_WITH_YOUR_FITBIT_CLIENT_ID"
@@ -30,8 +30,7 @@
         "@kingstinct/react-native-healthkit",
         {
           "NSHealthShareUsageDescription": "Health Sync reads your activity, sleep, and vitals so it can merge them with your Google/Fitbit data without double counting.",
-          "NSHealthUpdateUsageDescription": "Health Sync writes activity recorded by your other devices into Apple Health so both platforms show your complete history.",
-          "background-delivery": true
+          "NSHealthUpdateUsageDescription": "Health Sync writes activity recorded by your other devices into Apple Health so both platforms show your complete history."
         }
       ],
       "expo-web-browser"
