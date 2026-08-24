@@ -1,5 +1,5 @@
 /**
- * Real HKClient over @kingstinct/react-native-healthkit (v9 API).
+ * Real HKClient over @kingstinct/react-native-healthkit (v14 API).
  *
  * This is the only HealthKit file that touches the native module, and the
  * only one that needs a device/simulator to exercise; the bridge and mapping
@@ -15,26 +15,18 @@ import {
   saveCategorySample,
   saveQuantitySample,
   WorkoutActivityType,
-  type CategorySample,
   type CategoryTypeIdentifier,
+  type CategoryTypeIdentifierWriteable,
   type CategoryValueForIdentifier,
   type ObjectTypeIdentifier,
   type QuantityTypeIdentifier,
-  type QueryOptionsWithSortOrder,
+  type QuantityTypeIdentifierWriteable,
   type SampleTypeIdentifierWriteable,
   type SourceRevision,
 } from "@kingstinct/react-native-healthkit";
 import type { TimeRange } from "health-sync";
 import type { HKClient } from "./bridge.ts";
 import { QUANTITY_TYPES, WORKOUT_TYPE, type HKSampleDTO } from "./mapping.ts";
-
-// The library's cross-platform stub types queryCategorySamples as 1-arg,
-// but the real iOS implementation (CategoryTypeModule.queryCategorySamples)
-// accepts (identifier, options) just like the quantity variant.
-const queryCategorySamplesWithOptions = queryCategorySamples as unknown as (
-  identifier: CategoryTypeIdentifier,
-  options?: QueryOptionsWithSortOrder,
-) => Promise<readonly CategorySample[]>;
 
 interface QuantityLike {
   unit: string;
@@ -58,15 +50,15 @@ function sourceFields(rev: SourceRevision | undefined) {
 
 export class NativeHKClient implements HKClient {
   async requestPermissions(read: string[], write: string[]): Promise<void> {
-    await requestAuthorization(
-      write.filter((t) => t !== WORKOUT_TYPE) as SampleTypeIdentifierWriteable[],
-      read as ObjectTypeIdentifier[],
-    );
+    await requestAuthorization({
+      toShare: write.filter((t) => t !== WORKOUT_TYPE) as SampleTypeIdentifierWriteable[],
+      toRead: read as ObjectTypeIdentifier[],
+    });
   }
 
   async queryQuantitySamples(typeIdentifier: string, range: TimeRange): Promise<HKSampleDTO[]> {
     const samples = await queryQuantitySamples(typeIdentifier as QuantityTypeIdentifier, {
-      filter: { startDate: new Date(range.start), endDate: new Date(range.end) },
+      filter: { date: { startDate: new Date(range.start), endDate: new Date(range.end) } },
       unit: QUANTITY_TYPES[typeIdentifier]?.unit,
       ascending: true,
       limit: 0,
@@ -84,8 +76,8 @@ export class NativeHKClient implements HKClient {
   }
 
   async queryCategorySamples(typeIdentifier: string, range: TimeRange): Promise<HKSampleDTO[]> {
-    const samples = await queryCategorySamplesWithOptions(typeIdentifier as CategoryTypeIdentifier, {
-      filter: { startDate: new Date(range.start), endDate: new Date(range.end) },
+    const samples = await queryCategorySamples(typeIdentifier as CategoryTypeIdentifier, {
+      filter: { date: { startDate: new Date(range.start), endDate: new Date(range.end) } },
       ascending: true,
       limit: 0,
     });
@@ -102,7 +94,7 @@ export class NativeHKClient implements HKClient {
 
   async queryWorkouts(range: TimeRange): Promise<HKSampleDTO[]> {
     const workouts = await queryWorkoutSamples({
-      filter: { startDate: new Date(range.start), endDate: new Date(range.end) },
+      filter: { date: { startDate: new Date(range.start), endDate: new Date(range.end) } },
       ascending: true,
       limit: 0,
     });
@@ -129,7 +121,7 @@ export class NativeHKClient implements HKClient {
     const metadata = (dto.metadata ?? {}) as Record<string, string>;
     if (QUANTITY_TYPES[dto.typeIdentifier]) {
       await saveQuantitySample(
-        dto.typeIdentifier as QuantityTypeIdentifier,
+        dto.typeIdentifier as QuantityTypeIdentifierWriteable,
         dto.unit!,
         dto.value,
         new Date(dto.startMs),
@@ -139,7 +131,7 @@ export class NativeHKClient implements HKClient {
       return;
     }
     await saveCategorySample(
-      dto.typeIdentifier as CategoryTypeIdentifier,
+      dto.typeIdentifier as CategoryTypeIdentifierWriteable,
       dto.value as CategoryValueForIdentifier,
       new Date(dto.startMs),
       new Date(dto.endMs),
@@ -152,15 +144,15 @@ export class NativeHKClient implements HKClient {
     // Fetch our tagged samples (HealthKit only lets an app delete its own
     // writes anyway), match the tag value in JS, delete by uuid.
     const wanted = new Set(values);
-    const filter = { withMetadataKey: key } as const;
+    const filter = { metadata: { withMetadataKey: key } } as const;
     const samples = QUANTITY_TYPES[typeIdentifier]
       ? await queryQuantitySamples(typeIdentifier as QuantityTypeIdentifier, { filter, limit: 0 })
-      : await queryCategorySamplesWithOptions(typeIdentifier as CategoryTypeIdentifier, { filter, limit: 0 });
+      : await queryCategorySamples(typeIdentifier as CategoryTypeIdentifier, { filter, limit: 0 });
     const uuids = samples
       .filter((s) => wanted.has((s.metadata as Record<string, unknown>)?.[key] as string))
       .map((s) => s.uuid);
     if (uuids.length > 0) {
-      await deleteObjects(typeIdentifier as ObjectTypeIdentifier, { uuids });
+      await deleteObjects(typeIdentifier as SampleTypeIdentifierWriteable, { uuids });
     }
   }
 }

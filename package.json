@@ -10,5 +10,8 @@
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "demo": "npm run demo -w health-sync"
+  },
+  "overrides": {
+    "react": "19.2.3"
   }
 }

@@ -5,7 +5,9 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "scheme": "healthsync",
-    "platforms": ["ios"],
+    "platforms": [
+      "ios"
+    ],
     "ios": {
       "bundleIdentifier": "com.salemseats.healthsync",
       "supportsTablet": false,
@@ -31,7 +33,8 @@
           "NSHealthUpdateUsageDescription": "Health Sync writes activity recorded by your other devices into Apple Health so both platforms show your complete history.",
           "background-delivery": true
         }
-      ]
+      ],
+      "expo-web-browser"
     ]
   }
 }
