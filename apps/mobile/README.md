@@ -46,7 +46,27 @@ src/
 2. **Apple side**: an Apple Developer account with the HealthKit capability
    (the config plugin in `app.json` sets up entitlements and Info.plist).
 
-## Install via TestFlight (recommended — no Mac needed)
+## Install via TestFlight
+
+Live as **Salem Health Sync** (App Store Connect app id `6804789912`,
+bundle id `com.salemseats.healthsync`, team `AF6MS7483E`). "Health Sync"
+was already taken on the App Store, hence the Salem prefix — display name
+only, nothing in the code depends on it.
+
+To push a new build, from the repo root:
+
+```bash
+bash build-testflight.sh
+```
+
+Same pattern as `~/Desktop/GitHub/SalemTriage/build-testflight.sh`: it
+archives, signs, and uploads using the App Store Connect API key shared
+across repos on this Mac (`~/.appstoreconnect/asc.env`) — no Xcode account
+sign-in, no EAS account. The build number is date-stamped automatically.
+Builds land in the "Internal Testers" group and appear in the TestFlight
+app within a few minutes of processing.
+
+## Alternative: EAS cloud build (no Mac needed)
 
 Builds run on Expo's EAS cloud and submit straight to App Store Connect.
 Prerequisites: a **paid Apple Developer Program** membership ($99/yr —
