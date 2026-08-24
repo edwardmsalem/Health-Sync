@@ -14,6 +14,8 @@
 import * as BackgroundTask from "expo-background-task";
 import * as TaskManager from "expo-task-manager";
 import { isConnected } from "../fitbit/auth.ts";
+import { getBackfillState, runBackfill } from "./backfill.ts";
+import { AsyncStorageKV } from "../storage/asyncStorageKV.ts";
 import { runSync } from "./runSync.ts";
 
 export const BACKGROUND_SYNC_TASK = "health-sync-background";
@@ -25,6 +27,11 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
       return BackgroundTask.BackgroundTaskResult.Success;
     }
     await runSync();
+    // Continue any history import a few chunks at a time. Rate-limit pauses
+    // are handled inside runBackfill and simply resume on the next wake.
+    if (await getBackfillState(new AsyncStorageKV())) {
+      await runBackfill({ maxChunks: 3 });
+    }
     return BackgroundTask.BackgroundTaskResult.Success;
   } catch {
     return BackgroundTask.BackgroundTaskResult.Failed;

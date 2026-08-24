@@ -22,8 +22,17 @@ import {
   getNightscoutConfig,
   setNightscoutConfig,
 } from "./src/nightscout/config.ts";
+import {
+  cancelBackfill,
+  getBackfillState,
+  progressOf,
+  runBackfill,
+  startBackfill,
+  type BackfillProgress,
+} from "./src/sync/backfill.ts";
 import { enableBackgroundSync } from "./src/sync/background.ts";
 import { runSync } from "./src/sync/runSync.ts";
+import { AsyncStorageKV } from "./src/storage/asyncStorageKV.ts";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -37,8 +46,15 @@ export default function App() {
   const [nsUrl, setNsUrl] = useState("");
   const [nsToken, setNsToken] = useState("");
   const [nsConfigured, setNsConfigured] = useState(false);
+  const [historyDays, setHistoryDays] = useState(60);
+  const [backfill, setBackfill] = useState<BackfillProgress | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [historyNote, setHistoryNote] = useState<string | null>(null);
 
   useEffect(() => {
+    getBackfillState(new AsyncStorageKV()).then((s) =>
+      setBackfill(s ? progressOf(s) : null),
+    );
     isConnected().then(setFitbitConnected);
     getNightscoutConfig().then((cfg) => {
       if (cfg) {
@@ -67,6 +83,35 @@ export default function App() {
         .catch((e) => setError(String(e)));
     }
   }, [response, request]);
+
+  const onImportHistory = useCallback(async () => {
+    setImporting(true);
+    setError(null);
+    setHistoryNote(null);
+    try {
+      const kv = new AsyncStorageKV();
+      if (!(await getBackfillState(kv))) {
+        await startBackfill(historyDays, Date.now(), kv);
+      }
+      const result = await runBackfill({
+        kv,
+        maxChunks: 5,
+        onChunk: setBackfill,
+      });
+      setBackfill(result.progress);
+      setHistoryNote(result.message);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setImporting(false);
+    }
+  }, [historyDays]);
+
+  const onCancelHistory = useCallback(async () => {
+    await cancelBackfill(new AsyncStorageKV());
+    setBackfill(null);
+    setHistoryNote(null);
+  }, []);
 
   const onSync = useCallback(async () => {
     setSyncing(true);
@@ -187,6 +232,67 @@ export default function App() {
           </Pressable>
         </View>
 
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>4 · Import history</Text>
+          <Text style={styles.hint}>
+            Pulls older Fitbit data into Apple Health, deduped the same way as
+            live data. Fitbit limits how fast history can be read, so this runs
+            in batches — it picks up where it left off, including on its own in
+            the background.
+          </Text>
+
+          <View style={styles.chipRow}>
+            {[30, 60, 90].map((d) => (
+              <Pressable
+                key={d}
+                style={[styles.chip, historyDays === d && styles.chipActive]}
+                disabled={backfill !== null || importing}
+                onPress={() => setHistoryDays(d)}
+              >
+                <Text style={[styles.chipText, historyDays === d && styles.chipTextActive]}>
+                  {d} days
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {backfill && (
+            <>
+              <View style={styles.progressTrack}>
+                <View
+                  style={[styles.progressFill, { width: `${Math.round(backfill.fraction * 100)}%` }]}
+                />
+              </View>
+              <Text style={styles.hint}>
+                {backfill.daysRemaining} of {backfill.daysTotal} days left
+              </Text>
+            </>
+          )}
+          {historyNote && <Text style={styles.hint}>{historyNote}</Text>}
+
+          <Pressable
+            style={[styles.button, (!fitbitConnected || importing) && styles.buttonDisabled]}
+            disabled={!fitbitConnected || importing}
+            onPress={onImportHistory}
+          >
+            {importing ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>
+                {backfill ? "Continue import" : `Import last ${historyDays} days`}
+              </Text>
+            )}
+          </Pressable>
+          {backfill && !importing && (
+            <Pressable onPress={onCancelHistory}>
+              <Text style={styles.link}>Cancel import</Text>
+            </Pressable>
+          )}
+          {!fitbitConnected && (
+            <Text style={styles.hint}>Connect Fitbit above to import its history.</Text>
+          )}
+        </View>
+
         {error && (
           <View style={[styles.card, styles.errorCard]}>
             <Text style={styles.errorText}>{error}</Text>
@@ -277,4 +383,21 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 15,
   },
+  chipRow: { flexDirection: "row", gap: 8 },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: "#eef0f3",
+  },
+  chipActive: { backgroundColor: "#007aff" },
+  chipText: { fontSize: 14, color: "#444", fontWeight: "500" },
+  chipTextActive: { color: "#fff" },
+  progressTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#e6e8eb",
+    overflow: "hidden",
+  },
+  progressFill: { height: 6, borderRadius: 3, backgroundColor: "#34c759" },
 });

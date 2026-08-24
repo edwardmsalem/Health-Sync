@@ -39,6 +39,22 @@ export interface FitbitHttp {
   request(method: "GET" | "POST" | "DELETE", path: string, body?: URLSearchParams): Promise<unknown>;
 }
 
+/**
+ * Fitbit allows 150 requests/hour per user. The intraday endpoints cost one
+ * call per metric per day, so a long history import will hit this — callers
+ * (see sync/backfill.ts) catch it, save their progress, and resume later.
+ */
+export class FitbitRateLimitError extends Error {
+  constructor(public readonly retryAfterSeconds: number | null) {
+    super(
+      retryAfterSeconds
+        ? `Fitbit rate limit reached — retry in about ${Math.ceil(retryAfterSeconds / 60)} min`
+        : "Fitbit rate limit reached — retry within the hour",
+    );
+    this.name = "FitbitRateLimitError";
+  }
+}
+
 /** Default HTTP implementation over fetch + a token supplier. */
 export class FetchFitbitHttp implements FitbitHttp {
   constructor(private readonly getAccessToken: () => Promise<string>) {}
@@ -54,6 +70,10 @@ export class FetchFitbitHttp implements FitbitHttp {
       },
       body: body?.toString(),
     });
+    if (res.status === 429) {
+      const retryAfter = Number(res.headers.get("Retry-After"));
+      throw new FitbitRateLimitError(Number.isFinite(retryAfter) ? retryAfter : null);
+    }
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Fitbit ${method} ${path} failed (${res.status}): ${text.slice(0, 300)}`);

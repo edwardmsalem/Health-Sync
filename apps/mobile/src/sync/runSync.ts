@@ -54,7 +54,20 @@ export interface AppSyncResult {
   connected: { fitbit: boolean; nightscout: boolean };
 }
 
-export async function runSync(settings: SyncSettings = DEFAULT_SETTINGS): Promise<AppSyncResult> {
+export interface SyncStack {
+  engine: SyncEngine;
+  fitbitBridge: FitbitBridge | null;
+  connected: { fitbit: boolean; nightscout: boolean };
+}
+
+/**
+ * Assemble the engine over whatever sources are connected. Split out from
+ * runSync so a history backfill can reuse one stack across many chunks
+ * instead of re-authorizing HealthKit and re-fetching the profile each time.
+ */
+export async function buildSyncStack(
+  settings: SyncSettings = DEFAULT_SETTINGS,
+): Promise<SyncStack> {
   const kv = new AsyncStorageKV();
 
   const hkBridge = new AppleHealthKitBridge(new NativeHKClient());
@@ -89,15 +102,25 @@ export async function runSync(settings: SyncSettings = DEFAULT_SETTINGS): Promis
     ledger: await loadLedger(kv),
   });
 
+  return {
+    engine,
+    fitbitBridge,
+    connected: { fitbit: fitbitBridge !== null, nightscout: nightscoutConfig !== null },
+  };
+}
+
+export async function runSync(settings: SyncSettings = DEFAULT_SETTINGS): Promise<AppSyncResult> {
+  const stack = await buildSyncStack(settings);
+
   const end = Date.now();
-  const report = await engine.sync({
+  const report = await stack.engine.sync({
     start: end - settings.lookbackDays * 86_400_000,
     end,
   });
 
   return {
     report,
-    fitbitSkippedWrites: fitbitBridge?.skippedWrites.length ?? 0,
-    connected: { fitbit: fitbitBridge !== null, nightscout: nightscoutConfig !== null },
+    fitbitSkippedWrites: stack.fitbitBridge?.skippedWrites.length ?? 0,
+    connected: stack.connected,
   };
 }
