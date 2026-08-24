@@ -13,6 +13,12 @@ import type { HealthRecord, Platform, TimeRange } from "../types.js";
 
 export interface HealthProvider {
   readonly platform: Platform;
+  /**
+   * A read-only provider is a pure data source (e.g. Nightscout CGM data):
+   * its records feed the canonical timeline and sync to every writable
+   * platform, but the engine never writes to or deletes from it.
+   */
+  readonly readOnly?: boolean;
   /** Read all records of the given types in the range. */
   read(range: TimeRange): Promise<HealthRecord[]>;
   /** Write records; must persist each record's externalId. */

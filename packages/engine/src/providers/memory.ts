@@ -15,6 +15,7 @@ export class MemoryProvider implements HealthProvider {
   constructor(
     readonly platform: Platform,
     seed: HealthRecord[] = [],
+    readonly readOnly: boolean = false,
   ) {
     this.records = [...seed];
   }

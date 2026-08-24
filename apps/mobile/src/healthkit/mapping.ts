@@ -56,7 +56,15 @@ export const QUANTITY_TYPES: Record<string, { metric: CumulativeMetric | PointMe
   HKQuantityTypeIdentifierBodyMass: { metric: "weight_kg", kind: "point", unit: "kg" },
   HKQuantityTypeIdentifierBodyFatPercentage: { metric: "body_fat_pct", kind: "point", unit: "%" },
   HKQuantityTypeIdentifierBloodGlucose: { metric: "blood_glucose_mgdl", kind: "point", unit: "mg/dL" },
+  HKQuantityTypeIdentifierDietaryCarbohydrates: { metric: "carbs_g", kind: "point", unit: "g" },
+  // Insulin is special-cased below: one HK type holds both bolus (point) and
+  // basal (cumulative), disambiguated by HKInsulinDeliveryReason metadata.
+  HKQuantityTypeIdentifierInsulinDelivery: { metric: "insulin_bolus_units", kind: "point", unit: "IU" },
 };
+
+/** HKInsulinDeliveryReason metadata values. */
+const INSULIN_REASON_BASAL = 1;
+const INSULIN_REASON_BOLUS = 2;
 
 export const SLEEP_TYPE = "HKCategoryTypeIdentifierSleepAnalysis";
 export const WORKOUT_TYPE = "HKWorkoutTypeIdentifier";
@@ -64,6 +72,10 @@ export const WORKOUT_TYPE = "HKWorkoutTypeIdentifier";
 const metricToType = new Map(
   Object.entries(QUANTITY_TYPES).map(([type, info]) => [info.metric, { type, unit: info.unit }]),
 );
+metricToType.set("insulin_basal_units", {
+  type: "HKQuantityTypeIdentifierInsulinDelivery",
+  unit: "IU",
+});
 
 /** HKCategoryValueSleepAnalysis values. */
 const HK_SLEEP_VALUES: Record<number, SleepStage> = {
@@ -83,11 +95,26 @@ const SLEEP_STAGE_TO_HK: Record<SleepStage, number> = {
   rem: 5,
 };
 
+/** True when a human typed this sample in by hand (Health app manual entry). */
+export function isUserEntered(dto: HKSampleDTO): boolean {
+  const v = dto.metadata?.["HKWasUserEntered"];
+  return v === 1 || v === true || v === "1";
+}
+
 /** Normalize a HealthKit source to a stable cross-platform device id. */
 export function normalizeSource(dto: HKSampleDTO): SourceRef {
+  // Manual entries outrank every device: the human knows their under-desk
+  // treadmill walk better than a wrist that never moved. Give them a
+  // dedicated source id so devicePriority can rank them first.
+  if (isUserEntered(dto)) {
+    return { id: "manual-entry", name: dto.sourceName ?? "Manual entry", platform: "apple" };
+  }
   const product = dto.sourceProductType ?? "";
+  const lowerName = (dto.sourceName ?? "").toLowerCase();
+  const lowerBundle = (dto.sourceBundleId ?? "").toLowerCase();
   let id: string;
-  if (product.startsWith("Watch")) id = "apple-watch";
+  if (lowerName.includes("garmin") || lowerBundle.includes("garmin")) id = "garmin";
+  else if (product.startsWith("Watch")) id = "apple-watch";
   else if (product.startsWith("iPhone")) id = "iphone";
   else if (product.startsWith("iPad")) id = "ipad";
   else if (dto.sourceName) {
@@ -116,6 +143,15 @@ export function quantityToRecords(dtos: HKSampleDTO[]): HealthRecord[] {
       source: normalizeSource(dto),
       externalId: externalIdOf(dto),
     };
+    if (dto.typeIdentifier === "HKQuantityTypeIdentifierInsulinDelivery") {
+      const reason = Number(dto.metadata?.["HKInsulinDeliveryReason"]);
+      if (reason === INSULIN_REASON_BASAL) {
+        out.push({ ...base, type: "cumulative", metric: "insulin_basal_units", value: dto.value });
+      } else {
+        out.push({ ...base, type: "point", metric: "insulin_bolus_units", value: dto.value, end: dto.startMs });
+      }
+      continue;
+    }
     if (info.kind === "steps") {
       out.push({ ...base, type: "steps", steps: dto.value });
     } else if (info.kind === "cumulative") {
@@ -194,13 +230,22 @@ export function recordToDTOs(record: HealthRecord): HKSampleDTO[] {
     case "point": {
       const target = metricToType.get(record.metric);
       if (!target) return []; // metric with no HealthKit equivalent
+      const insulinReason =
+        record.metric === "insulin_basal_units"
+          ? INSULIN_REASON_BASAL
+          : record.metric === "insulin_bolus_units"
+            ? INSULIN_REASON_BOLUS
+            : undefined;
       return [{
         typeIdentifier: target.type,
         unit: target.unit,
         value: record.value,
         startMs: record.start,
         endMs: record.type === "point" ? record.start : record.end,
-        metadata,
+        metadata:
+          insulinReason !== undefined
+            ? { ...metadata, HKInsulinDeliveryReason: insulinReason }
+            : metadata,
       }];
     }
     case "sleep": {

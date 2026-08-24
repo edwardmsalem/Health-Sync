@@ -11,7 +11,7 @@
 export type EpochMs = number;
 
 /** The platform a record lives on (or came from). */
-export type Platform = "apple" | "google";
+export type Platform = "apple" | "google" | "garmin" | "nightscout";
 
 /** Identifies the device / app that originally recorded a sample. */
 export interface SourceRef {
@@ -94,6 +94,7 @@ export type CumulativeMetric =
   | "exercise_minutes"
   | "hydration_ml"
   | "dietary_energy_kcal"
+  | "insulin_basal_units"
   | (string & {});
 
 export interface CumulativeSample extends BaseRecord {
@@ -122,6 +123,8 @@ export type PointMetric =
   | "blood_glucose_mgdl"
   | "blood_pressure_systolic_mmhg"
   | "blood_pressure_diastolic_mmhg"
+  | "insulin_bolus_units"
+  | "carbs_g"
   | (string & {});
 
 export interface PointSample extends BaseRecord {

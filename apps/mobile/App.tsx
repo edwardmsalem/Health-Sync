@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
@@ -17,6 +18,10 @@ import {
   isConnected,
   useFitbitAuthRequest,
 } from "./src/fitbit/auth.ts";
+import {
+  getNightscoutConfig,
+  setNightscoutConfig,
+} from "./src/nightscout/config.ts";
 import { enableBackgroundSync } from "./src/sync/background.ts";
 import { runSync } from "./src/sync/runSync.ts";
 
@@ -29,19 +34,31 @@ export default function App() {
   const [skipped, setSkipped] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [request, response, promptAsync] = useFitbitAuthRequest();
+  const [nsUrl, setNsUrl] = useState("");
+  const [nsToken, setNsToken] = useState("");
+  const [nsConfigured, setNsConfigured] = useState(false);
 
   useEffect(() => {
     isConnected().then(setFitbitConnected);
+    getNightscoutConfig().then((cfg) => {
+      if (cfg) {
+        setNsUrl(cfg.url);
+        setNsToken(cfg.token);
+        setNsConfigured(true);
+      }
+    });
   }, []);
 
-  // Once connected, ask iOS to run the sync periodically in the background.
+  const anySourceConnected = fitbitConnected || nsConfigured;
+
+  // Once any source is connected, ask iOS to sync periodically in background.
   useEffect(() => {
-    if (fitbitConnected) {
+    if (anySourceConnected) {
       enableBackgroundSync().catch(() => {
         // Background refresh disabled in Settings — manual sync still works.
       });
     }
-  }, [fitbitConnected]);
+  }, [anySourceConnected]);
 
   useEffect(() => {
     if (response?.type === "success" && request && response.params.code) {
@@ -71,11 +88,11 @@ export default function App() {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Health Sync</Text>
         <Text style={styles.subtitle}>
-          Apple Health ⇄ Fitbit, without double counting
+          Everything merged into Apple Health, without double counting
         </Text>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>1 · Connect Fitbit</Text>
+          <Text style={styles.cardTitle}>1 · Fitbit (optional)</Text>
           {fitbitConnected ? (
             <>
               <Text style={styles.ok}>Connected ✓</Text>
@@ -97,15 +114,69 @@ export default function App() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>2 · Sync</Text>
+          <Text style={styles.cardTitle}>2 · Nightscout (AAPS)</Text>
+          <Text style={styles.hint}>
+            Pulls CGM glucose, insulin, and carbs into Apple Health.
+            Read-only — nothing is ever written to Nightscout.
+          </Text>
+          <TextInput
+            style={styles.input}
+            placeholder="https://your-nightscout-site.com"
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+            value={nsUrl}
+            onChangeText={setNsUrl}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Access token (optional for open sites)"
+            autoCapitalize="none"
+            autoCorrect={false}
+            secureTextEntry
+            value={nsToken}
+            onChangeText={setNsToken}
+          />
+          {nsConfigured ? (
+            <View style={styles.rowBetween}>
+              <Text style={styles.ok}>Configured ✓</Text>
+              <Pressable
+                onPress={() =>
+                  setNightscoutConfig(null).then(() => {
+                    setNsUrl("");
+                    setNsToken("");
+                    setNsConfigured(false);
+                  })
+                }
+              >
+                <Text style={styles.link}>Remove</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              style={[styles.button, !nsUrl.startsWith("http") && styles.buttonDisabled]}
+              disabled={!nsUrl.startsWith("http")}
+              onPress={() =>
+                setNightscoutConfig({ url: nsUrl.trim(), token: nsToken.trim() })
+                  .then(() => setNsConfigured(true))
+                  .catch((e) => setError(String(e)))
+              }
+            >
+              <Text style={styles.buttonText}>Save Nightscout</Text>
+            </Pressable>
+          )}
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>3 · Sync</Text>
           <Text style={styles.hint}>
             Reads the last 7 days from Apple Health and Fitbit, removes
             overlap (both devices worn), and fills each side's gaps. Once
             connected, iOS also runs this automatically a few times a day.
           </Text>
           <Pressable
-            style={[styles.button, (!fitbitConnected || syncing) && styles.buttonDisabled]}
-            disabled={!fitbitConnected || syncing}
+            style={[styles.button, (!anySourceConnected || syncing) && styles.buttonDisabled]}
+            disabled={!anySourceConnected || syncing}
             onPress={onSync}
           >
             {syncing ? (
@@ -134,13 +205,19 @@ export default function App() {
               label="Duplicate readings suppressed"
               value={String(report.pointDuplicatesRemoved)}
             />
-            {report.plans.map((plan) => (
-              <Row
-                key={plan.platform}
-                label={`Written to ${plan.platform === "apple" ? "Apple Health" : "Fitbit"}`}
-                value={`${plan.writes.length} records`}
-              />
-            ))}
+            {report.plans
+              .filter((plan) => plan.platform !== "nightscout")
+              .map((plan) => (
+                <Row
+                  key={plan.platform}
+                  label={`Written to ${
+                    { apple: "Apple Health", google: "Fitbit", garmin: "Garmin" }[
+                      plan.platform as "apple" | "google" | "garmin"
+                    ] ?? plan.platform
+                  }`}
+                  value={`${plan.writes.length} records`}
+                />
+              ))}
             {skipped > 0 && (
               <Text style={styles.hint}>
                 {skipped} record(s) have no Fitbit write API (raw steps/heart
@@ -189,6 +266,15 @@ const styles = StyleSheet.create({
   errorCard: { backgroundColor: "#fff2f2" },
   errorText: { color: "#c00", fontSize: 13 },
   row: { flexDirection: "row", justifyContent: "space-between" },
+  rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   rowLabel: { fontSize: 14, color: "#444", flexShrink: 1 },
   rowValue: { fontSize: 14, fontWeight: "600" },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+  },
 });

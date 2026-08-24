@@ -1,9 +1,17 @@
 # Health Sync — iOS app
 
-The iPhone app that runs the sync: **Apple Health (HealthKit) ⇄ Fitbit cloud**,
-powered by the shared engine in `packages/engine`. No Android device is
-needed — your Fitbit's data lives in Fitbit's cloud, and the app talks to it
-directly over the Fitbit Web API.
+The iPhone app that runs the sync, with **Apple Health as the hub**:
+- **Fitbit cloud** (optional, two-way): sleep/workouts/weight out, everything in
+- **Nightscout / AAPS** (optional, read-only in): CGM glucose, insulin
+  (boluses + temp-basal segments), carbs — into Apple Health
+- **Garmin**: wear it 24/7 paired to Android; Garmin Connect's own Apple
+  Health integration lands its data in HealthKit, where the engine treats it
+  as one more source (`garmin`) and dedupes it against everything else
+- **Manual entries** (Health app "+"): recognized via `HKWasUserEntered` and
+  ranked ABOVE all devices — an under-desk treadmill walk you logged by hand
+  wins its time window over a wrist that barely moved
+
+All powered by the shared engine in `packages/engine`.
 
 Once Fitbit is connected, the app registers a **background task** so iOS
 re-runs the sync automatically a few times a day (cadence is up to iOS;

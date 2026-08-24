@@ -156,3 +156,79 @@ describe("normalizeActivityName", () => {
     expect(normalizeActivityName("TraditionalStrengthTraining")).toBe("strength_training");
   });
 });
+
+describe("manual entries and Garmin sources", () => {
+  it("user-entered samples map to the manual-entry source", () => {
+    const records = quantityToRecords([
+      dto({
+        sourceProductType: "iPhone17,1",
+        sourceName: "Health",
+        metadata: { HKWasUserEntered: 1 },
+      }),
+    ]);
+    expect(records[0]!.source.id).toBe("manual-entry");
+  });
+
+  it("Garmin Connect samples map to the garmin source", () => {
+    const records = quantityToRecords([
+      dto({
+        sourceProductType: undefined,
+        sourceName: "Connect",
+        sourceBundleId: "com.garmin.connect.mobile",
+      }),
+    ]);
+    expect(records[0]!.source.id).toBe("garmin");
+  });
+});
+
+describe("diabetes metrics", () => {
+  it("splits insulin delivery into bolus (point) and basal (cumulative) by reason", () => {
+    const records = quantityToRecords([
+      dto({
+        typeIdentifier: "HKQuantityTypeIdentifierInsulinDelivery",
+        value: 4.5,
+        metadata: { HKInsulinDeliveryReason: 2 },
+      }),
+      dto({
+        typeIdentifier: "HKQuantityTypeIdentifierInsulinDelivery",
+        value: 0.6,
+        startMs: T0,
+        endMs: T0 + 30 * M,
+        metadata: { HKInsulinDeliveryReason: 1 },
+      }),
+    ]);
+    expect(records[0]).toMatchObject({ type: "point", metric: "insulin_bolus_units", value: 4.5 });
+    expect(records[1]).toMatchObject({
+      type: "cumulative",
+      metric: "insulin_basal_units",
+      value: 0.6,
+      end: T0 + 30 * M,
+    });
+  });
+
+  it("writes insulin back with the reason metadata and the sync tag", () => {
+    const dtos = recordToDTOs({
+      type: "cumulative",
+      metric: "insulin_basal_units",
+      value: 0.6,
+      start: T0,
+      end: T0 + 30 * M,
+      source: { id: "aaps", platform: "nightscout" },
+      externalId: "health-sync:abc",
+    });
+    expect(dtos[0]).toMatchObject({
+      typeIdentifier: "HKQuantityTypeIdentifierInsulinDelivery",
+      unit: "IU",
+      metadata: { HKInsulinDeliveryReason: 1, [HK_EXTERNAL_ID_KEY]: "health-sync:abc" },
+    });
+    const glucose = recordToDTOs({
+      type: "point",
+      metric: "blood_glucose_mgdl",
+      value: 115,
+      start: T0,
+      end: T0,
+      source: { id: "aaps", platform: "nightscout" },
+    });
+    expect(glucose[0]!.typeIdentifier).toBe("HKQuantityTypeIdentifierBloodGlucose");
+  });
+});

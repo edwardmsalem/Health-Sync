@@ -289,3 +289,155 @@ describe("SyncEngine — all metric classes", () => {
     expect(googleDistance).toHaveLength(1);
   });
 });
+
+describe("SyncEngine — three platforms (Apple + Google + Garmin)", () => {
+  const garminWatch: SourceRef = { id: "garmin-watch", platform: "garmin" };
+  const threeWayOpts = {
+    devicePriority: ["apple-watch", "garmin-watch", "fitbit-air"],
+    stepsStrategy: "priority" as const,
+  };
+
+  function makeThree() {
+    const apple = new MemoryProvider("apple");
+    const google = new MemoryProvider("google");
+    const garmin = new MemoryProvider("garmin");
+    const engine = new SyncEngine([apple, google, garmin], {
+      dedup: threeWayOpts,
+    });
+    return { apple, google, garmin, engine };
+  }
+
+  it("cross-fills all three platforms from each other's exclusive data", async () => {
+    const { apple, google, garmin, engine } = makeThree();
+    apple.addNative(steps(watch, day + 8 * H, day + 9 * H, 4200));
+    google.addNative(steps(fitbit, day + 12 * H, day + 13 * H, 3100));
+    garmin.addNative(steps(garminWatch, day + 18 * H, day + 19 * H, 2000));
+
+    await engine.sync(range);
+
+    // Every platform ends up with all three blocks: 9300 total.
+    for (const p of [apple, google, garmin]) {
+      const all = (await p.read(range)).filter(
+        (r): r is StepsSample => r.type === "steps",
+      );
+      expect(all.reduce((s, r) => s + r.steps, 0)).toBe(9300);
+      // Two of the three blocks are synced copies, one is native.
+      expect(all.filter((r) => isSyncAuthored(r))).toHaveLength(2);
+    }
+  });
+
+  it("resolves a three-device overlap to one winner everywhere", async () => {
+    const { apple, google, garmin, engine } = makeThree();
+    // All three devices worn for the same morning walk.
+    apple.addNative(steps(watch, day + 8 * H, day + 9 * H, 4200));
+    google.addNative(steps(fitbit, day + 8 * H, day + 9 * H, 4350));
+    garmin.addNative(steps(garminWatch, day + 8 * H, day + 9 * H, 4100));
+
+    const report = await engine.sync(range);
+
+    // 12650 raw -> 4200 canonical (watch is top priority).
+    expect(report.stepsDoubleCountRemoved).toBe(8450);
+    // Everyone already covers that hour natively: nothing to write.
+    for (const plan of report.plans) {
+      expect(plan.writes).toHaveLength(0);
+    }
+  });
+
+  it("three-way sleep: one night tracked by all three stays one night", async () => {
+    const { apple, google, garmin, engine } = makeThree();
+    apple.addNative(sleep(watch, day - H + 10 * M, day + 6 * H + 45 * M));
+    google.addNative(sleep(fitbit, day - H, day + 6 * H + 55 * M));
+    garmin.addNative(sleep(garminWatch, day - H + 5 * M, day + 6 * H + 50 * M));
+
+    await engine.sync(range);
+
+    // No platform received a duplicate night (each already overlaps it).
+    for (const p of [apple, google, garmin]) {
+      const sessions = (await p.read(range)).filter((r) => r.type === "sleep");
+      expect(sessions).toHaveLength(1);
+    }
+  });
+
+  it("second three-way run is a no-op", async () => {
+    const { apple, google, garmin, engine } = makeThree();
+    apple.addNative(steps(watch, day + 8 * H, day + 9 * H, 4200));
+    google.addNative(sleep(fitbit, day - H, day + 7 * H));
+    garmin.addNative(steps(garminWatch, day + 18 * H, day + 19 * H, 2000));
+
+    await engine.sync(range);
+    const second = await engine.sync(range);
+    for (const plan of second.plans) {
+      expect(plan.writes).toHaveLength(0);
+      expect(plan.deletes).toHaveLength(0);
+    }
+  });
+});
+
+describe("SyncEngine — read-only source providers (Nightscout)", () => {
+  const aaps: SourceRef = { id: "aaps", platform: "nightscout" };
+
+  it("read-only data reaches every writable platform, source is never written", async () => {
+    const apple = new MemoryProvider("apple");
+    const google = new MemoryProvider("google");
+    const nightscout = new MemoryProvider("nightscout", [], true);
+    const glucose = (at: number, mgdl: number): PointSample => ({
+      type: "point",
+      metric: "blood_glucose_mgdl",
+      value: mgdl,
+      start: at,
+      end: at,
+      source: aaps,
+    });
+    nightscout.addNative(glucose(day + 8 * H, 110), glucose(day + 8 * H + 5 * M, 122));
+
+    const engine = new SyncEngine([apple, google, nightscout], { dedup: dedupOpts });
+    const report = await engine.sync(range);
+
+    // Glucose landed on Apple (and Google), tagged as synced.
+    const appleGlucose = (await apple.read(range)).filter(
+      (r) => r.type === "point" && r.metric === "blood_glucose_mgdl",
+    );
+    expect(appleGlucose).toHaveLength(2);
+    expect(appleGlucose.every((r) => isSyncAuthored(r))).toBe(true);
+
+    // Nothing was ever planned for the read-only source.
+    const nsPlan = report.plans.find((p) => p.platform === "nightscout")!;
+    expect(nsPlan.writes).toHaveLength(0);
+    expect(nsPlan.deletes).toHaveLength(0);
+    expect(await nightscout.read(range)).toHaveLength(2); // untouched
+
+    // Idempotent.
+    const second = await engine.sync(range);
+    for (const plan of second.plans) expect(plan.writes).toHaveLength(0);
+  });
+
+  it("nearby readings native on a platform suppress the read-only copy", async () => {
+    const apple = new MemoryProvider("apple");
+    const google = new MemoryProvider("google");
+    const nightscout = new MemoryProvider("nightscout", [], true);
+    // Apple already has a glucose reading (e.g. manual meter entry) 2 min away.
+    apple.addNative({
+      type: "point",
+      metric: "blood_glucose_mgdl",
+      value: 112,
+      start: day + 8 * H + 2 * M,
+      end: day + 8 * H + 2 * M,
+      source: watch,
+    });
+    nightscout.addNative({
+      type: "point",
+      metric: "blood_glucose_mgdl",
+      value: 110,
+      start: day + 8 * H,
+      end: day + 8 * H,
+      source: aaps,
+    });
+
+    const engine = new SyncEngine([apple, google, nightscout], { dedup: dedupOpts });
+    await engine.sync(range);
+    const appleGlucose = (await apple.read(range)).filter(
+      (r) => r.type === "point" && r.metric === "blood_glucose_mgdl",
+    );
+    expect(appleGlucose).toHaveLength(1); // no near-duplicate added
+  });
+});

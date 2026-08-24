@@ -1,0 +1,23 @@
+{
+  "name": "garmin-migrate",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "One-time push of Apple Health + Fitbit history into Garmin Connect (workouts as TCX, weight/body fat), deduped by the health-sync engine.",
+  "scripts": {
+    "migrate": "tsx src/cli.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "health-sync": "*",
+    "sax": "^1.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/sax": "^1.2.7",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

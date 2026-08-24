@@ -208,6 +208,12 @@ export class SyncEngine {
     const plans: PlatformPlan[] = [];
     for (const { provider } of reads) {
       const platform = provider.platform;
+      if (provider.readOnly) {
+        // Pure data source: contributes to the canonical timeline above but
+        // never receives writes or deletes.
+        plans.push({ platform, writes: [], deletes: [] });
+        continue;
+      }
       const authored = authoredByPlatform.get(platform)!;
       const platformNative = nativeByPlatform.get(platform)!;
       const wantedExternalIds = new Set<string>();
@@ -273,6 +279,7 @@ export class SyncEngine {
     // 5. Apply.
     if (!this.dryRun) {
       for (const { provider } of reads) {
+        if (provider.readOnly) continue;
         const plan = plans.find((p) => p.platform === provider.platform)!;
         if (plan.deletes.length > 0) {
           await provider.deleteByExternalIds(plan.deletes);

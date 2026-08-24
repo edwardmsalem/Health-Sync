@@ -4,12 +4,34 @@ Two-way smart sync between **Apple Health** and **Google Health** (Health
 Connect / Fitbit) that understands **overlapping activity from multiple
 devices**.
 
+## Architecture: Apple Health is the hub
+
+Not every platform can receive every data type — Fitbit's API takes no raw
+steps or heart rate, and Garmin takes nothing but activities and weight.
+Apple Health is the only store that accepts everything, so everything
+converges there:
+
+```
+Garmin watch (24/7) ──▶ Garmin Connect ──▶ HealthKit ─┐
+Apple Watch ──────────────────────────────▶ HealthKit ─┤
+Manual entries (treadmill walks) ─────────▶ HealthKit ─┼─▶ ENGINE: one deduped
+Fitbit cloud ◀──(sleep/workouts/weight)── the app ◀───┤   canonical timeline,
+Nightscout/AAPS (glucose·insulin·carbs) ──▶ the app ──┘   echo-free, gap-filled
+Garmin Connect ◀──(workouts/weight, one-time CLI push)
+```
+
+Overlaps between any number of simultaneously-worn devices resolve
+minute-by-minute to one winner; **manual entries outrank every device**
+(your under-desk treadmill log beats a wrist that never swung). Read-only
+sources (Nightscout) feed the timeline but are never written to.
+
 This is a monorepo:
 
 | Package | What it is |
 |---|---|
-| [`packages/engine`](packages/engine) | The platform-agnostic sync + dedup engine (this README) — 39 tests |
-| [`apps/mobile`](apps/mobile) | The iOS app: HealthKit ⇄ Fitbit cloud, built on the engine — 22 tests, [setup guide](apps/mobile/README.md) |
+| [`packages/engine`](packages/engine) | The platform-agnostic N-way sync + dedup engine (this README) |
+| [`apps/mobile`](apps/mobile) | The iOS app: HealthKit ⇄ Fitbit cloud + Nightscout, built on the engine — [setup guide](apps/mobile/README.md) |
+| [`tools/garmin-migrate`](tools/garmin-migrate) | One-time push of workout + weight history into Garmin Connect (all Garmin's API accepts) |
 
 If you wear an Apple Watch and a Fitbit at the same time, both record the same
 walk and the same night's sleep. Naively merging the two platforms sums them
