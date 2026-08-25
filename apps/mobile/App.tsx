@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import * as Notifications from "expo-notifications";
 import type { SyncReport } from "health-sync";
 import {
   importFromTakeout,
@@ -21,6 +22,14 @@ import {
   setNightscoutConfig,
 } from "./src/nightscout/config.ts";
 import { enableBackgroundSync } from "./src/sync/background.ts";
+import {
+  describeLastSync,
+  getLastSyncAt,
+  isStale,
+  requestNotificationPermission,
+  STALE_AFTER_DAYS,
+} from "./src/sync/reminder.ts";
+import { AsyncStorageKV } from "./src/storage/asyncStorageKV.ts";
 import { runSync } from "./src/sync/runSync.ts";
 
 export default function App() {
@@ -34,8 +43,14 @@ export default function App() {
   const [nsUrl, setNsUrl] = useState("");
   const [nsToken, setNsToken] = useState("");
   const [nsConfigured, setNsConfigured] = useState(false);
+  const [lastSyncAt, setLastSyncAt] = useState<number | null>(null);
+  const [notifyOn, setNotifyOn] = useState(false);
 
   useEffect(() => {
+    getLastSyncAt(new AsyncStorageKV()).then(setLastSyncAt);
+    Notifications.getPermissionsAsync()
+      .then((p) => setNotifyOn(p.granted))
+      .catch(() => {});
     getNightscoutConfig().then((cfg) => {
       if (cfg) {
         setNsUrl(cfg.url);
@@ -79,6 +94,7 @@ export default function App() {
       const result = await runSync();
       setReport(result.report);
       setSkipped(result.fitbitSkippedWrites);
+      setLastSyncAt(await getLastSyncAt(new AsyncStorageKV()));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -219,6 +235,26 @@ export default function App() {
             Health, removing overlap when more than one device recorded the
             same minutes. iOS also runs this automatically a few times a day.
           </Text>
+          <View style={styles.rowBetween}>
+            <Text style={[styles.hint, isStale(lastSyncAt) && styles.warnText]}>
+              {describeLastSync(lastSyncAt)}
+            </Text>
+            {!notifyOn && (
+              <Pressable
+                onPress={() =>
+                  requestNotificationPermission().then(setNotifyOn)
+                }
+              >
+                <Text style={styles.link}>Remind me if it stops</Text>
+              </Pressable>
+            )}
+          </View>
+          {notifyOn && (
+            <Text style={styles.hint}>
+              You'll get a notification if nothing syncs for {STALE_AFTER_DAYS} days.
+            </Text>
+          )}
+
           <Pressable
             style={[styles.button, (!anySourceConnected || syncing) && styles.buttonDisabled]}
             disabled={!anySourceConnected || syncing}
@@ -309,6 +345,7 @@ const styles = StyleSheet.create({
   ok: { color: "#34c759", fontWeight: "600" },
   link: { color: "#007aff" },
   errorCard: { backgroundColor: "#fff2f2" },
+  warnText: { color: "#b25000", fontWeight: "600" },
   errorText: { color: "#c00", fontSize: 13 },
   row: { flexDirection: "row", justifyContent: "space-between" },
   rowBetween: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },

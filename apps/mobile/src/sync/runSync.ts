@@ -23,6 +23,7 @@ import { getNightscoutConfig } from "../nightscout/config.ts";
 import { NightscoutProvider } from "../nightscout/provider.ts";
 import { AsyncStorageKV } from "../storage/asyncStorageKV.ts";
 import { loadLedger } from "./ledgerStore.ts";
+import { noteSyncSucceeded } from "./reminder.ts";
 
 export interface SyncSettings {
   /** Most-trusted source first. */
@@ -117,6 +118,9 @@ export async function runSync(settings: SyncSettings = DEFAULT_SETTINGS): Promis
     start: end - settings.lookbackDays * 86_400_000,
     end,
   });
+
+  // Successful pass: push the "gone quiet" reminder further out.
+  await noteSyncSucceeded(new AsyncStorageKV(), end);
 
   return {
     report,
