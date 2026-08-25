@@ -135,6 +135,13 @@ export default function App() {
                   value={`${takeoutResult.firstDay} → ${takeoutResult.lastDay}`}
                 />
               )}
+              {takeoutResult.recordsFound === 0 && (
+                <Text style={styles.hint}>
+                  Nothing recognized in that export. Files it contained:{"\n"}
+                  {takeoutResult.unrecognized.slice(0, 8).join("\n") ||
+                    "(no .json files found — is this the right zip?)"}
+                </Text>
+              )}
             </>
           )}
 

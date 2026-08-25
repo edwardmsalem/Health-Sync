@@ -7,14 +7,37 @@ import { unzipSync, strFromU8 } from "fflate";
 import type { HealthRecord } from "health-sync";
 import { classifyTakeoutFile, parseTakeoutFile } from "./parse.ts";
 
-/** Parse every recognized Fitbit JSON file inside a Takeout zip. */
+export interface TakeoutZipResult {
+  records: HealthRecord[];
+  filesParsed: number;
+  /**
+   * A sample of .json files present that no parser claimed. Empty on a
+   * normal export; if Google changes the layout this is what tells us what
+   * the new one looks like, instead of the import silently finding nothing.
+   */
+  unrecognized: string[];
+}
+
+const UNRECOGNIZED_SAMPLE = 25;
+
+/** Parse every recognized Fitbit/Google Health JSON file inside a Takeout zip. */
 export function parseTakeoutZip(
   zipBytes: Uint8Array,
   utcOffsetMs: number,
   onProgress?: (filesParsed: number, total: number) => void,
-): { records: HealthRecord[]; filesParsed: number } {
+): TakeoutZipResult {
+  const unrecognized: string[] = [];
   const entries = unzipSync(zipBytes, {
-    filter: (file) => classifyTakeoutFile(file.name) !== null,
+    filter: (file) => {
+      if (classifyTakeoutFile(file.name) !== null) return true;
+      if (
+        file.name.toLowerCase().endsWith(".json") &&
+        unrecognized.length < UNRECOGNIZED_SAMPLE
+      ) {
+        unrecognized.push(file.name);
+      }
+      return false;
+    },
   });
   const names = Object.keys(entries);
   const records: HealthRecord[] = [];
@@ -29,5 +52,5 @@ export function parseTakeoutZip(
     filesParsed++;
     onProgress?.(filesParsed, names.length);
   }
-  return { records, filesParsed };
+  return { records, filesParsed, unrecognized };
 }

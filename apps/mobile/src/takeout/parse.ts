@@ -204,21 +204,45 @@ export function parseSleepFile(logs: TakeoutSleepLog[], utcOffsetMs: number): Sl
 }
 
 /** Which parser a Takeout filename maps to. */
+/**
+ * Which parser a Takeout filename maps to.
+ *
+ * Names are matched on a normalized basename ("steps-2026-07-17.json" ->
+ * "steps"), tolerating the "-", "_" and " " separators Google has used, so
+ * the importer survives cosmetic renames from the Fitbit -> Google Health
+ * rebrand. Matching is deliberately anchored at the start and requires the
+ * separator, so neighbours like "sleep_score-*.json" or "steps_goal-*.json"
+ * are NOT mistaken for time-series files.
+ */
 export function classifyTakeoutFile(path: string):
   | { kind: "steps" }
   | { kind: "cumulative"; metric: CumulativeSample["metric"]; scale: number }
   | { kind: "heart_rate" }
   | { kind: "sleep" }
   | null {
-  const name = path.split("/").pop()?.toLowerCase() ?? "";
-  if (!name.endsWith(".json")) return null;
-  if (name.startsWith("steps-")) return { kind: "steps" };
-  // Takeout distance is in centimetres.
-  if (name.startsWith("distance-")) return { kind: "cumulative", metric: "distance_m", scale: 0.01 };
-  if (name.startsWith("calories-")) return { kind: "cumulative", metric: "active_energy_kcal", scale: 1 };
-  if (name.startsWith("heart_rate-")) return { kind: "heart_rate" };
-  if (name.startsWith("sleep-")) return { kind: "sleep" };
-  return null;
+  const base = path.split("/").pop()?.toLowerCase() ?? "";
+  if (!base.endsWith(".json")) return null;
+
+  // "steps-2026-07-17.json" / "steps_2026_07.json" -> "steps"
+  const stem = base.slice(0, -".json".length);
+  const prefix = stem.split(/[-_ ]\d/)[0]?.replace(/[-_ ]+$/, "") ?? "";
+
+  switch (prefix) {
+    case "steps":
+      return { kind: "steps" };
+    // Takeout distance is in centimetres.
+    case "distance":
+      return { kind: "cumulative", metric: "distance_m", scale: 0.01 };
+    case "calories":
+      return { kind: "cumulative", metric: "active_energy_kcal", scale: 1 };
+    case "heart_rate":
+    case "heartrate":
+      return { kind: "heart_rate" };
+    case "sleep":
+      return { kind: "sleep" };
+    default:
+      return null;
+  }
 }
 
 /** Parse one Takeout JSON file into engine records. Unknown files -> []. */

@@ -176,3 +176,19 @@ describe("classifyTakeoutFile / parseTakeoutFile", () => {
     expect(parseTakeoutFile("Other/whatever.json", [], OFFSET)).toEqual([]);
   });
 });
+
+describe("classifier tolerance to renames", () => {
+  it("accepts -, _ and space separators", () => {
+    expect(classifyTakeoutFile("steps-2026-07-17.json")).toEqual({ kind: "steps" });
+    expect(classifyTakeoutFile("steps_2026_07.json")).toEqual({ kind: "steps" });
+    expect(classifyTakeoutFile("Google Health/heart_rate-2026-07.json")).toEqual({
+      kind: "heart_rate",
+    });
+  });
+
+  it("does not mistake neighbouring files for time series", () => {
+    expect(classifyTakeoutFile("sleep_score-2026-07-17.json")).toBeNull();
+    expect(classifyTakeoutFile("steps_goal-2026-07-17.json")).toBeNull();
+    expect(classifyTakeoutFile("resting_heart_rate-2026-07.json")).toBeNull();
+  });
+});

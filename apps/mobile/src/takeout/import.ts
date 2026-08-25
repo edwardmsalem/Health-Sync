@@ -46,6 +46,8 @@ export interface TakeoutImportResult {
   cancelled: boolean;
   filesParsed: number;
   recordsFound: number;
+  /** .json files no parser claimed — diagnostic for an unexpected layout. */
+  unrecognized: string[];
   reports: SyncReport[];
   firstDay: string | null;
   lastDay: string | null;
@@ -74,6 +76,7 @@ export async function importFromTakeout(options: {
       cancelled: true,
       filesParsed: 0,
       recordsFound: 0,
+      unrecognized: [],
       reports: [],
       firstDay: null,
       lastDay: null,
@@ -90,7 +93,7 @@ export async function importFromTakeout(options: {
   report({ phase: "reading", fraction: 1 });
 
   const utcOffsetMs = -new Date().getTimezoneOffset() * 60_000;
-  const { records, filesParsed } = parseTakeoutZip(bytes, utcOffsetMs, (done, total) =>
+  const { records, filesParsed, unrecognized } = parseTakeoutZip(bytes, utcOffsetMs, (done, total) =>
     report({ phase: "parsing", fraction: total ? done / total : 1, filesParsed: done }),
   );
 
@@ -101,6 +104,7 @@ export async function importFromTakeout(options: {
       cancelled: false,
       filesParsed,
       recordsFound: 0,
+      unrecognized,
       reports: [],
       firstDay: null,
       lastDay: null,
@@ -137,6 +141,7 @@ export async function importFromTakeout(options: {
     cancelled: false,
     filesParsed,
     recordsFound: records.length,
+    unrecognized,
     reports,
     firstDay: dayKey(span.start),
     lastDay: dayKey(span.end - 1),
