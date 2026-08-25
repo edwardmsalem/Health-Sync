@@ -65,14 +65,26 @@ interface RawEntry {
   value?: unknown;
 }
 
+/**
+ * Longest run a coalesced sample may span.
+ *
+ * Sparse series (steps, distance) break naturally at idle minutes, but dense
+ * ones never do — Fitbit records a calorie value for EVERY minute, so an
+ * uncapped merge turns a whole monthly file into one month-long sample.
+ * Capping keeps samples hour-sized, which is what Apple Health should show
+ * and what the dedup engine's minute arbitration expects to work with.
+ */
+const MAX_RUN_MS = 60 * MINUTE_MS;
+
 /** Merge consecutive minute buckets from the same series into runs. */
 function coalesce<T extends { start: number; end: number; value: number }>(
   points: { at: number; value: number }[],
+  maxRunMs = MAX_RUN_MS,
 ): T[] {
   const out: T[] = [];
   let run: { start: number; end: number; value: number } | null = null;
   for (const p of points.sort((a, b) => a.at - b.at)) {
-    if (run && p.at === run.end) {
+    if (run && p.at === run.end && p.at + MINUTE_MS - run.start <= maxRunMs) {
       run.end = p.at + MINUTE_MS;
       run.value += p.value;
     } else {
@@ -135,8 +147,18 @@ export function parseCumulativeFile(
   }));
 }
 
+/**
+ * Heart rate, downsampled to one averaged sample per minute.
+ *
+ * Takeout stores roughly one reading every 3-5 seconds — a couple of months
+ * is millions of points, and HealthKit has no batch write (only
+ * saveQuantitySample, one native call per sample), so importing raw would
+ * take hours and be killed by iOS. One point per minute matches the
+ * granularity Fitbit's own intraday API returned, and is far finer than
+ * anything Apple Health displays for historical data.
+ */
 export function parseHeartRateFile(entries: RawEntry[], utcOffsetMs: number): PointSample[] {
-  const out: PointSample[] = [];
+  const buckets = new Map<number, { sum: number; count: number }>();
   for (const e of entries ?? []) {
     if (!e?.dateTime) continue;
     const at = parseTakeoutTime(e.dateTime, utcOffsetMs);
@@ -147,16 +169,25 @@ export function parseHeartRateFile(entries: RawEntry[], utcOffsetMs: number): Po
         ? numericValue((raw as { bpm: unknown }).bpm)
         : numericValue(raw);
     if (bpm === null || bpm <= 0) continue;
-    out.push({
-      type: "point",
-      metric: "heart_rate_bpm",
-      source: TAKEOUT_SOURCE,
-      start: at,
-      end: at,
-      value: bpm,
-    });
+    const minute = Math.floor(at / MINUTE_MS) * MINUTE_MS;
+    const b = buckets.get(minute);
+    if (b) {
+      b.sum += bpm;
+      b.count++;
+    } else {
+      buckets.set(minute, { sum: bpm, count: 1 });
+    }
   }
-  return out.sort((a, b) => a.start - b.start);
+  return [...buckets.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([minute, b]) => ({
+      type: "point" as const,
+      metric: "heart_rate_bpm" as const,
+      source: TAKEOUT_SOURCE,
+      start: minute,
+      end: minute,
+      value: Math.round(b.sum / b.count),
+    }));
 }
 
 const SLEEP_LEVELS: Record<string, SleepStageInterval["stage"]> = {
@@ -233,8 +264,14 @@ export function classifyTakeoutFile(path: string):
     // Takeout distance is in centimetres.
     case "distance":
       return { kind: "cumulative", metric: "distance_m", scale: 0.01 };
+    // Deliberately NOT imported: Fitbit's calorie series is TOTAL energy
+    // (it records BMR every minute, even at rest), so writing it into
+    // HealthKit's Active Energy would inflate that metric several-fold and
+    // corrupt a number the Apple Watch and Garmin already record correctly.
+    // There is no HealthKit bucket for "total", and BMR cannot be reliably
+    // subtracted, so the honest choice is to leave it out.
     case "calories":
-      return { kind: "cumulative", metric: "active_energy_kcal", scale: 1 };
+      return null;
     case "heart_rate":
     case "heartrate":
       return { kind: "heart_rate" };

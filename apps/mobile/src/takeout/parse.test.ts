@@ -192,3 +192,51 @@ describe("classifier tolerance to renames", () => {
     expect(classifyTakeoutFile("resting_heart_rate-2026-07.json")).toBeNull();
   });
 });
+
+describe("dense-series handling", () => {
+  const MIN = 60_000;
+
+  it("caps coalesced runs at an hour so a dense series can't collapse", () => {
+    // Three hours of never-zero minutes, like Fitbit's BMR calorie series.
+    const entries = Array.from({ length: 180 }, (_, i) => {
+      const h = 8 + Math.floor(i / 60);
+      const m = i % 60;
+      return {
+        dateTime: `07/17/26 ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`,
+        value: "100",
+      };
+    });
+    const samples = parseCumulativeFile(entries, OFFSET, "distance_m", 1);
+    expect(samples).toHaveLength(3); // one per hour, not one 3-hour blob
+    for (const s of samples) {
+      expect(s.end - s.start).toBeLessThanOrEqual(60 * MIN);
+    }
+    // Total is preserved.
+    expect(samples.reduce((t, s) => t + s.value, 0)).toBe(18000);
+  });
+
+  it("downsamples heart rate to one averaged sample per minute", () => {
+    const entries = [
+      { dateTime: "07/17/26 08:00:00", value: { bpm: 60 } },
+      { dateTime: "07/17/26 08:00:03", value: { bpm: 62 } },
+      { dateTime: "07/17/26 08:00:06", value: { bpm: 64 } },
+      { dateTime: "07/17/26 08:01:00", value: { bpm: 70 } },
+    ];
+    const points = parseHeartRateFile(entries as any, OFFSET);
+    expect(points).toHaveLength(2);
+    expect(points[0]!.value).toBe(62); // mean of 60/62/64
+    expect(points[1]!.value).toBe(70);
+    expect(points[1]!.start - points[0]!.start).toBe(MIN);
+  });
+
+  it("does not import Fitbit's BMR-inclusive calorie series", () => {
+    expect(classifyTakeoutFile("calories-2026-07-17.json")).toBeNull();
+    expect(
+      parseTakeoutFile(
+        "Global Export Data/calories-2026-07-17.json",
+        [{ dateTime: "07/17/26 08:00:00", value: "1.2" }],
+        OFFSET,
+      ),
+    ).toEqual([]);
+  });
+});
