@@ -441,3 +441,142 @@ describe("SyncEngine — read-only source providers (Nightscout)", () => {
     expect(appleGlucose).toHaveLength(1); // no near-duplicate added
   });
 });
+
+describe("SyncEngine — Nightscout alongside data an iOS looper already wrote", () => {
+  // Trio/Loop on iPhone write glucose, insulin and carbs straight to
+  // HealthKit. Nightscout holds the SAME readings (same CGM, same pump), so
+  // pulling Nightscout in must not duplicate what is already there.
+  const aaps: SourceRef = { id: "aaps", platform: "nightscout" };
+  const trio: SourceRef = { id: "trio", platform: "apple" };
+  const CGM_INTERVAL = 5 * M;
+
+  const glucose = (source: SourceRef, at: number, mgdl: number): PointSample => ({
+    type: "point",
+    metric: "blood_glucose_mgdl",
+    value: mgdl,
+    start: at,
+    end: at,
+    source,
+  });
+
+  /** A CGM trace: one reading every 5 minutes. */
+  const trace = (source: SourceRef, from: number, count: number, base = 110) =>
+    Array.from({ length: count }, (_, i) => glucose(source, from + i * CGM_INTERVAL, base + i));
+
+  function makeNs() {
+    const apple = new MemoryProvider("apple");
+    const nightscout = new MemoryProvider("nightscout", [], true);
+    const engine = new SyncEngine([apple, nightscout], {
+      dedup: { devicePriority: ["apple-watch", "aaps"], stepsStrategy: "priority" },
+    });
+    return { apple, nightscout, engine };
+  }
+
+  const glucoseIn = async (p: MemoryProvider) =>
+    (await p.read(range)).filter(
+      (r) => r.type === "point" && r.metric === "blood_glucose_mgdl",
+    );
+
+  it("adds nothing when the looper already wrote the same readings", async () => {
+    const { apple, nightscout, engine } = makeNs();
+    const start = day + 8 * H;
+    // Trio already synced 3 hours of CGM into Apple Health...
+    apple.addNative(...trace(trio, start, 36));
+    // ...and Nightscout has the very same readings.
+    nightscout.addNative(...trace(aaps, start, 36));
+
+    await engine.sync(range);
+
+    const after = await glucoseIn(apple);
+    expect(after).toHaveLength(36); // not 72
+    expect(after.every((r) => !isSyncAuthored(r))).toBe(true); // all still Trio's
+  });
+
+  it("tolerates small timestamp skew between the two paths", async () => {
+    const { apple, nightscout, engine } = makeNs();
+    const start = day + 8 * H;
+    apple.addNative(...trace(trio, start, 12));
+    // Nightscout's copies land a few seconds off, as they would in practice.
+    nightscout.addNative(...trace(aaps, start + 7000, 12));
+
+    await engine.sync(range);
+    expect(await glucoseIn(apple)).toHaveLength(12);
+  });
+
+  it("fills the stretch after the looper stopped writing", async () => {
+    const { apple, nightscout, engine } = makeNs();
+    const start = day + 8 * H;
+    // Trio covered the first hour, then stopped (switched to AAPS on Android).
+    apple.addNative(...trace(trio, start, 12));
+    // Nightscout has the whole three hours.
+    nightscout.addNative(...trace(aaps, start, 36));
+
+    await engine.sync(range);
+
+    const after = await glucoseIn(apple);
+    const added = after.filter((r) => isSyncAuthored(r));
+    // Trio's 12 stay; Nightscout supplies the rest. The single reading at the
+    // handoff (5 min past Trio's last) is suppressed because it falls inside
+    // the 5-minute dedup tolerance — one 5-minute gap, once, at the seam.
+    expect(after).toHaveLength(35);
+    expect(added).toHaveLength(23);
+    expect(added.every((r) => r.start >= start + 13 * CGM_INTERVAL)).toBe(true);
+    // Nothing was written into the stretch Trio already covered.
+    expect(added.some((r) => r.start < start + 12 * CGM_INTERVAL)).toBe(false);
+  });
+
+  it("does not duplicate insulin or carbs the looper already wrote", async () => {
+    const { apple, nightscout, engine } = makeNs();
+    const at = day + 8 * H;
+    // Trio wrote a meal bolus, the carbs for it, and a basal segment.
+    apple.addNative(
+      { type: "point", metric: "insulin_bolus_units", value: 4.5, start: at, end: at, source: trio },
+      { type: "point", metric: "carbs_g", value: 45, start: at, end: at, source: trio },
+      {
+        type: "cumulative",
+        metric: "insulin_basal_units",
+        value: 0.6,
+        start: at,
+        end: at + 30 * M,
+        source: trio,
+      },
+    );
+    // Nightscout holds the very same treatments.
+    nightscout.addNative(
+      { type: "point", metric: "insulin_bolus_units", value: 4.5, start: at, end: at, source: aaps },
+      { type: "point", metric: "carbs_g", value: 45, start: at, end: at, source: aaps },
+      {
+        type: "cumulative",
+        metric: "insulin_basal_units",
+        value: 0.6,
+        start: at,
+        end: at + 30 * M,
+        source: aaps,
+      },
+    );
+
+    await engine.sync(range);
+
+    const all = await apple.read(range);
+    expect(all.filter((r) => r.type === "point" && r.metric === "insulin_bolus_units")).toHaveLength(1);
+    expect(all.filter((r) => r.type === "point" && r.metric === "carbs_g")).toHaveLength(1);
+    expect(
+      all.filter((r) => r.type === "cumulative" && r.metric === "insulin_basal_units"),
+    ).toHaveLength(1);
+    expect(all.every((r) => !isSyncAuthored(r))).toBe(true);
+  });
+
+  it("is idempotent — a second pass adds nothing", async () => {
+    const { apple, nightscout, engine } = makeNs();
+    const start = day + 8 * H;
+    apple.addNative(...trace(trio, start, 12));
+    nightscout.addNative(...trace(aaps, start, 36));
+
+    await engine.sync(range);
+    const afterFirst = (await glucoseIn(apple)).length;
+    const second = await engine.sync(range);
+
+    expect((await glucoseIn(apple)).length).toBe(afterFirst);
+    for (const plan of second.plans) expect(plan.writes).toHaveLength(0);
+  });
+});
