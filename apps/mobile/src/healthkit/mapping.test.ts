@@ -232,3 +232,43 @@ describe("diabetes metrics", () => {
     expect(glucose[0]!.typeIdentifier).toBe("HKQuantityTypeIdentifierBloodGlucose");
   });
 });
+
+describe("HealthKit-derived (read-only) quantity types", () => {
+  it("still reads exercise time", () => {
+    const records = quantityToRecords([
+      dto({ typeIdentifier: "HKQuantityTypeIdentifierAppleExerciseTime", value: 22 }),
+    ]);
+    expect(records[0]).toMatchObject({
+      type: "cumulative",
+      metric: "exercise_minutes",
+      value: 22,
+    });
+  });
+
+  it("never produces a write for one", () => {
+    // HealthKit computes exercise time itself; saving it is rejected.
+    expect(
+      recordToDTOs({
+        type: "cumulative",
+        metric: "exercise_minutes",
+        value: 22,
+        start: T0,
+        end: T0 + 22 * M,
+        source: { id: "fitbit", platform: "google" },
+      }),
+    ).toHaveLength(0);
+  });
+
+  it("writeable metrics are unaffected", () => {
+    expect(
+      recordToDTOs({
+        type: "cumulative",
+        metric: "distance_m",
+        value: 3200,
+        start: T0,
+        end: T0 + M,
+        source: { id: "fitbit", platform: "google" },
+      }),
+    ).toHaveLength(1);
+  });
+});

@@ -66,11 +66,29 @@ export const QUANTITY_TYPES: Record<string, { metric: CumulativeMetric | PointMe
 const INSULIN_REASON_BASAL = 1;
 const INSULIN_REASON_BOLUS = 2;
 
+/**
+ * Quantity types HealthKit derives itself: readable, never writeable.
+ * Requesting write authorization for one of these is rejected outright
+ * ("Cannot convert ... to enum SampleTypeIdentifierWriteable"), which fails
+ * the whole authorization call — so they must be excluded from the write
+ * list and from any attempt to save.
+ * Mirrors QuantityTypeIdentifierReadOnly in the HealthKit library.
+ */
+export const READ_ONLY_QUANTITY_TYPES: ReadonlySet<string> = new Set([
+  "HKQuantityTypeIdentifierAppleExerciseTime",
+  "HKQuantityTypeIdentifierAppleStandTime",
+  "HKQuantityTypeIdentifierAppleWalkingSteadiness",
+  "HKQuantityTypeIdentifierAtrialFibrillationBurden",
+  "HKQuantityTypeIdentifierWalkingHeartRateAverage",
+]);
+
 export const SLEEP_TYPE = "HKCategoryTypeIdentifierSleepAnalysis";
 export const WORKOUT_TYPE = "HKWorkoutTypeIdentifier";
 
 const metricToType = new Map(
-  Object.entries(QUANTITY_TYPES).map(([type, info]) => [info.metric, { type, unit: info.unit }]),
+  Object.entries(QUANTITY_TYPES)
+    .filter(([type]) => !READ_ONLY_QUANTITY_TYPES.has(type))
+    .map(([type, info]) => [info.metric, { type, unit: info.unit }]),
 );
 metricToType.set("insulin_basal_units", {
   type: "HKQuantityTypeIdentifierInsulinDelivery",

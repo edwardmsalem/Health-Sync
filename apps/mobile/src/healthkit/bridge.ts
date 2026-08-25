@@ -8,6 +8,7 @@ import {
   HKSampleDTO,
   HK_EXTERNAL_ID_KEY,
   QUANTITY_TYPES,
+  READ_ONLY_QUANTITY_TYPES,
   SLEEP_TYPE,
   WORKOUT_TYPE,
   categoryToSleepSessions,
@@ -29,11 +30,20 @@ export interface HKClient {
 
 const ALL_TYPES = [...Object.keys(QUANTITY_TYPES), SLEEP_TYPE, WORKOUT_TYPE];
 
+/**
+ * Types we ask to WRITE. Workouts are saved by their owning app, and
+ * HealthKit-derived quantities (exercise time and friends) reject write
+ * authorization outright, taking the whole request down with them.
+ */
+const WRITABLE_TYPES = ALL_TYPES.filter(
+  (t) => t !== WORKOUT_TYPE && !READ_ONLY_QUANTITY_TYPES.has(t),
+);
+
 export class AppleHealthKitBridge implements HealthKitBridge {
   constructor(private readonly client: HKClient) {}
 
   async authorize(): Promise<void> {
-    await this.client.requestPermissions(ALL_TYPES, ALL_TYPES);
+    await this.client.requestPermissions(ALL_TYPES, WRITABLE_TYPES);
   }
 
   async querySamples(range: TimeRange): Promise<HealthRecord[]> {
