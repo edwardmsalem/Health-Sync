@@ -13,25 +13,22 @@
 
 import * as BackgroundTask from "expo-background-task";
 import * as TaskManager from "expo-task-manager";
+import { getNightscoutConfig } from "../nightscout/config.ts";
 import { isConnected } from "../fitbit/auth.ts";
-import { getBackfillState, runBackfill } from "./backfill.ts";
-import { AsyncStorageKV } from "../storage/asyncStorageKV.ts";
 import { runSync } from "./runSync.ts";
 
 export const BACKGROUND_SYNC_TASK = "health-sync-background";
 
 TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
   try {
-    if (!(await isConnected())) {
+    // Any configured source is enough to be worth a pass. A Takeout import
+    // is a one-off user action, so it is deliberately not run here.
+    const configured = (await getNightscoutConfig()) !== null || (await isConnected());
+    if (!configured) {
       // Not set up yet — nothing to do, don't count as a failure.
       return BackgroundTask.BackgroundTaskResult.Success;
     }
     await runSync();
-    // Continue any history import a few chunks at a time. Rate-limit pauses
-    // are handled inside runBackfill and simply resume on the next wake.
-    if (await getBackfillState(new AsyncStorageKV())) {
-      await runBackfill({ maxChunks: 3 });
-    }
     return BackgroundTask.BackgroundTaskResult.Success;
   } catch {
     return BackgroundTask.BackgroundTaskResult.Failed;

@@ -10,52 +10,32 @@ import {
   View,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import * as WebBrowser from "expo-web-browser";
 import type { SyncReport } from "health-sync";
 import {
-  disconnect,
-  exchangeCode,
-  isConnected,
-  useFitbitAuthRequest,
-} from "./src/fitbit/auth.ts";
+  importFromTakeout,
+  type TakeoutImportProgress,
+  type TakeoutImportResult,
+} from "./src/takeout/import.ts";
 import {
   getNightscoutConfig,
   setNightscoutConfig,
 } from "./src/nightscout/config.ts";
-import {
-  cancelBackfill,
-  getBackfillState,
-  progressOf,
-  runBackfill,
-  startBackfill,
-  type BackfillProgress,
-} from "./src/sync/backfill.ts";
 import { enableBackgroundSync } from "./src/sync/background.ts";
 import { runSync } from "./src/sync/runSync.ts";
-import { AsyncStorageKV } from "./src/storage/asyncStorageKV.ts";
-
-WebBrowser.maybeCompleteAuthSession();
 
 export default function App() {
-  const [fitbitConnected, setFitbitConnected] = useState(false);
+  const [takeoutBusy, setTakeoutBusy] = useState(false);
+  const [takeoutProgress, setTakeoutProgress] = useState<TakeoutImportProgress | null>(null);
+  const [takeoutResult, setTakeoutResult] = useState<TakeoutImportResult | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [report, setReport] = useState<SyncReport | null>(null);
   const [skipped, setSkipped] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [request, response, promptAsync] = useFitbitAuthRequest();
   const [nsUrl, setNsUrl] = useState("");
   const [nsToken, setNsToken] = useState("");
   const [nsConfigured, setNsConfigured] = useState(false);
-  const [historyDays, setHistoryDays] = useState(60);
-  const [backfill, setBackfill] = useState<BackfillProgress | null>(null);
-  const [importing, setImporting] = useState(false);
-  const [historyNote, setHistoryNote] = useState<string | null>(null);
 
   useEffect(() => {
-    getBackfillState(new AsyncStorageKV()).then((s) =>
-      setBackfill(s ? progressOf(s) : null),
-    );
-    isConnected().then(setFitbitConnected);
     getNightscoutConfig().then((cfg) => {
       if (cfg) {
         setNsUrl(cfg.url);
@@ -65,7 +45,7 @@ export default function App() {
     });
   }, []);
 
-  const anySourceConnected = fitbitConnected || nsConfigured;
+  const anySourceConnected = nsConfigured;
 
   // Once any source is connected, ask iOS to sync periodically in background.
   useEffect(() => {
@@ -76,41 +56,20 @@ export default function App() {
     }
   }, [anySourceConnected]);
 
-  useEffect(() => {
-    if (response?.type === "success" && request && response.params.code) {
-      exchangeCode(request, response.params.code)
-        .then(() => setFitbitConnected(true))
-        .catch((e) => setError(String(e)));
-    }
-  }, [response, request]);
-
-  const onImportHistory = useCallback(async () => {
-    setImporting(true);
+  const onImportTakeout = useCallback(async () => {
+    setTakeoutBusy(true);
     setError(null);
-    setHistoryNote(null);
+    setTakeoutResult(null);
+    setTakeoutProgress(null);
     try {
-      const kv = new AsyncStorageKV();
-      if (!(await getBackfillState(kv))) {
-        await startBackfill(historyDays, Date.now(), kv);
-      }
-      const result = await runBackfill({
-        kv,
-        maxChunks: 5,
-        onChunk: setBackfill,
-      });
-      setBackfill(result.progress);
-      setHistoryNote(result.message);
+      const result = await importFromTakeout({ onProgress: setTakeoutProgress });
+      if (!result.cancelled) setTakeoutResult(result);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
-      setImporting(false);
+      setTakeoutBusy(false);
+      setTakeoutProgress(null);
     }
-  }, [historyDays]);
-
-  const onCancelHistory = useCallback(async () => {
-    await cancelBackfill(new AsyncStorageKV());
-    setBackfill(null);
-    setHistoryNote(null);
   }, []);
 
   const onSync = useCallback(async () => {
@@ -137,25 +96,59 @@ export default function App() {
         </Text>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>1 · Fitbit (optional)</Text>
-          {fitbitConnected ? (
+          <Text style={styles.cardTitle}>1 · Fitbit history (Google Takeout)</Text>
+          <Text style={styles.hint}>
+            Fitbit's old API is being retired and no longer issues logins, so
+            history comes from an export instead: request your Fitbit data at
+            takeout.google.com, get the .zip onto this phone, then pick it
+            here. It is read on-device and merged into Apple Health with the
+            same overlap rules as live data.
+          </Text>
+
+          {takeoutProgress && (
             <>
-              <Text style={styles.ok}>Connected ✓</Text>
-              <Pressable
-                onPress={() => disconnect().then(() => setFitbitConnected(false))}
-              >
-                <Text style={styles.link}>Disconnect</Text>
-              </Pressable>
+              <View style={styles.progressTrack}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    { width: `${Math.round(takeoutProgress.fraction * 100)}%` },
+                  ]}
+                />
+              </View>
+              <Text style={styles.hint}>
+                {takeoutProgress.phase === "reading"
+                  ? "Reading the export…"
+                  : takeoutProgress.phase === "parsing"
+                    ? `Parsing files… (${takeoutProgress.filesParsed ?? 0})`
+                    : "Merging into Apple Health…"}
+              </Text>
             </>
-          ) : (
-            <Pressable
-              style={styles.button}
-              disabled={!request}
-              onPress={() => promptAsync()}
-            >
-              <Text style={styles.buttonText}>Sign in with Fitbit</Text>
-            </Pressable>
           )}
+
+          {takeoutResult && (
+            <>
+              <Row label="Files read" value={String(takeoutResult.filesParsed)} />
+              <Row label="Records found" value={String(takeoutResult.recordsFound)} />
+              {takeoutResult.firstDay && (
+                <Row
+                  label="Covering"
+                  value={`${takeoutResult.firstDay} → ${takeoutResult.lastDay}`}
+                />
+              )}
+            </>
+          )}
+
+          <Pressable
+            style={[styles.button, takeoutBusy && styles.buttonDisabled]}
+            disabled={takeoutBusy}
+            onPress={onImportTakeout}
+          >
+            {takeoutBusy ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Choose Takeout .zip</Text>
+            )}
+          </Pressable>
         </View>
 
         <View style={styles.card}>
@@ -215,9 +208,9 @@ export default function App() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>3 · Sync</Text>
           <Text style={styles.hint}>
-            Reads the last 7 days from Apple Health and Fitbit, removes
-            overlap (both devices worn), and fills each side's gaps. Once
-            connected, iOS also runs this automatically a few times a day.
+            Merges the last 7 days across your connected sources into Apple
+            Health, removing overlap when more than one device recorded the
+            same minutes. iOS also runs this automatically a few times a day.
           </Text>
           <Pressable
             style={[styles.button, (!anySourceConnected || syncing) && styles.buttonDisabled]}
@@ -230,67 +223,6 @@ export default function App() {
               <Text style={styles.buttonText}>Sync now</Text>
             )}
           </Pressable>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>4 · Import history</Text>
-          <Text style={styles.hint}>
-            Pulls older Fitbit data into Apple Health, deduped the same way as
-            live data. Fitbit limits how fast history can be read, so this runs
-            in batches — it picks up where it left off, including on its own in
-            the background.
-          </Text>
-
-          <View style={styles.chipRow}>
-            {[30, 60, 90].map((d) => (
-              <Pressable
-                key={d}
-                style={[styles.chip, historyDays === d && styles.chipActive]}
-                disabled={backfill !== null || importing}
-                onPress={() => setHistoryDays(d)}
-              >
-                <Text style={[styles.chipText, historyDays === d && styles.chipTextActive]}>
-                  {d} days
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          {backfill && (
-            <>
-              <View style={styles.progressTrack}>
-                <View
-                  style={[styles.progressFill, { width: `${Math.round(backfill.fraction * 100)}%` }]}
-                />
-              </View>
-              <Text style={styles.hint}>
-                {backfill.daysRemaining} of {backfill.daysTotal} days left
-              </Text>
-            </>
-          )}
-          {historyNote && <Text style={styles.hint}>{historyNote}</Text>}
-
-          <Pressable
-            style={[styles.button, (!fitbitConnected || importing) && styles.buttonDisabled]}
-            disabled={!fitbitConnected || importing}
-            onPress={onImportHistory}
-          >
-            {importing ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>
-                {backfill ? "Continue import" : `Import last ${historyDays} days`}
-              </Text>
-            )}
-          </Pressable>
-          {backfill && !importing && (
-            <Pressable onPress={onCancelHistory}>
-              <Text style={styles.link}>Cancel import</Text>
-            </Pressable>
-          )}
-          {!fitbitConnected && (
-            <Text style={styles.hint}>Connect Fitbit above to import its history.</Text>
-          )}
         </View>
 
         {error && (
