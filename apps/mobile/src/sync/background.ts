@@ -38,6 +38,9 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK, async () => {
 /** Ask iOS to run the sync periodically. Idempotent. */
 export async function enableBackgroundSync(): Promise<void> {
   await BackgroundTask.registerTaskAsync(BACKGROUND_SYNC_TASK, {
-    minimumInterval: 6 * 60, // minutes; a floor, not a schedule — iOS decides
+    // A floor, not a schedule. Kept low so iOS may run it often; the real
+    // day-to-day cadence comes from the HealthKit observers (observers.ts),
+    // with this as the backstop for quiet stretches.
+    minimumInterval: 60,
   });
 }
