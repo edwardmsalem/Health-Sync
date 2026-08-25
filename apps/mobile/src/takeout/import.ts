@@ -12,7 +12,7 @@
  */
 
 import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system";
+import { File } from "expo-file-system";
 import {
   AppleHealthProvider,
   SyncEngine,
@@ -84,12 +84,11 @@ export async function importFromTakeout(options: {
   }
 
   report({ phase: "reading", fraction: 0 });
-  const base64 = await FileSystem.readAsStringAsync(picked.assets[0].uri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-  const binary = globalThis.atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  // File.bytes() hands back a Uint8Array straight from native, which is what
+  // the unzip wants. The older readAsStringAsync path is deprecated in SDK 54
+  // and also forced a base64 round-trip: ~33% larger and needing the whole
+  // archive as a JS string before decoding it back to bytes.
+  const bytes = await new File(picked.assets[0].uri).bytes();
   report({ phase: "reading", fraction: 1 });
 
   const utcOffsetMs = -new Date().getTimezoneOffset() * 60_000;
