@@ -61,10 +61,22 @@ export function parseEntries(entries: NightscoutEntry[]): PointSample[] {
   return out;
 }
 
+/**
+ * Treatments -> engine records.
+ *
+ * Temp basals need care. AAPS issues a temp basal with a nominal duration
+ * (often 30 min) and then REPLACES it minutes later with a new one as the
+ * loop re-decides. The declared duration is therefore an upper bound, not
+ * what was delivered: taking it at face value over-counts basal insulin by
+ * the whole overlap. Each temp basal is truncated at the start of the next
+ * one, so only insulin that was actually delivered is recorded. A duration
+ * of 0 is AAPS cancelling the running temp basal, and ends it there.
+ */
 export function parseTreatments(
   treatments: NightscoutTreatment[],
 ): (PointSample | CumulativeSample)[] {
   const out: (PointSample | CumulativeSample)[] = [];
+
   for (const t of treatments) {
     if (!t.created_at) continue;
     const at = Date.parse(t.created_at);
@@ -90,26 +102,45 @@ export function parseTreatments(
         source: AAPS_SOURCE,
       });
     }
-    const rate = t.rate ?? t.absolute;
-    if (
-      t.eventType === "Temp Basal" &&
-      typeof rate === "number" &&
-      rate > 0 &&
-      typeof t.duration === "number" &&
-      t.duration > 0
-    ) {
-      const durationMs = t.duration * 60_000;
-      const units = (rate * t.duration) / 60;
-      out.push({
-        type: "cumulative",
-        metric: "insulin_basal_units",
-        value: Math.round(units * 1000) / 1000,
-        start: at,
-        end: at + durationMs,
-        source: AAPS_SOURCE,
-      });
-    }
   }
+
+  // Temp basals, resolved against each other in time order.
+  const basals = treatments
+    .filter((t) => t.eventType === "Temp Basal" && t.created_at)
+    .map((t) => ({
+      start: Date.parse(t.created_at!),
+      rate: t.rate ?? t.absolute,
+      durationMin: t.duration,
+    }))
+    .filter(
+      (b): b is { start: number; rate: number; durationMin: number } =>
+        !Number.isNaN(b.start) &&
+        typeof b.rate === "number" &&
+        b.rate > 0 &&
+        typeof b.durationMin === "number",
+    )
+    .sort((a, b) => a.start - b.start);
+
+  for (let i = 0; i < basals.length; i++) {
+    const b = basals[i]!;
+    const declaredEnd = b.start + b.durationMin * 60_000;
+    // Superseded by the next temp basal, if that arrives first.
+    const next = basals[i + 1]?.start ?? declaredEnd;
+    const end = Math.min(declaredEnd, next);
+    const deliveredMs = end - b.start;
+    if (deliveredMs <= 0) continue;
+    const units = (b.rate * deliveredMs) / 3_600_000;
+    if (units <= 0) continue;
+    out.push({
+      type: "cumulative",
+      metric: "insulin_basal_units",
+      value: Math.round(units * 1000) / 1000,
+      start: b.start,
+      end,
+      source: AAPS_SOURCE,
+    });
+  }
+
   out.sort((a, b) => a.start - b.start);
   return out;
 }

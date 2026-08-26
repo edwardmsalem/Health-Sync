@@ -17,6 +17,22 @@ import type {
 /** Custom HealthKit metadata key carrying the engine's externalId tag. */
 export const HK_EXTERNAL_ID_KEY = "healthSyncExternalId";
 
+/**
+ * Apple's own de-duplication keys. When a sample carries a sync identifier,
+ * HealthKit itself refuses to store a second sample with the same identifier
+ * unless the version is higher — it replaces instead of duplicating. Setting
+ * these makes duplicate rows structurally impossible even if this app were
+ * to ask for the same write twice, which is a guarantee our own bookkeeping
+ * cannot give on its own.
+ *
+ * The identifier is the engine's content fingerprint, so the same logical
+ * record always maps to the same identifier. The version stays 1: a repeat
+ * write is the SAME record, not a newer revision of it, and must be ignored
+ * rather than replace what is there.
+ */
+export const HK_SYNC_IDENTIFIER_KEY = "HKMetadataKeySyncIdentifier";
+export const HK_SYNC_VERSION_KEY = "HKMetadataKeySyncVersion";
+
 /** Neutral sample shape produced/consumed by the native HealthKit client. */
 export interface HKSampleDTO {
   uuid?: string;
@@ -144,8 +160,12 @@ export function normalizeSource(dto: HKSampleDTO): SourceRef {
 }
 
 function externalIdOf(dto: HKSampleDTO): string | undefined {
-  const v = dto.metadata?.[HK_EXTERNAL_ID_KEY];
-  return typeof v === "string" ? v : undefined;
+  // Either key identifies one of our writes; check both so a sample still
+  // counts as ours if one of them fails to round-trip.
+  const custom = dto.metadata?.[HK_EXTERNAL_ID_KEY];
+  if (typeof custom === "string") return custom;
+  const apple = dto.metadata?.[HK_SYNC_IDENTIFIER_KEY];
+  return typeof apple === "string" ? apple : undefined;
 }
 
 /** Convert quantity-sample DTOs to engine records. */
@@ -231,7 +251,11 @@ export function categoryToSleepSessions(
 /** Convert an engine record into the DTO(s) HealthKit should save. */
 export function recordToDTOs(record: HealthRecord): HKSampleDTO[] {
   const metadata = record.externalId
-    ? { [HK_EXTERNAL_ID_KEY]: record.externalId }
+    ? {
+        [HK_EXTERNAL_ID_KEY]: record.externalId,
+        [HK_SYNC_IDENTIFIER_KEY]: record.externalId,
+        [HK_SYNC_VERSION_KEY]: 1,
+      }
     : undefined;
   switch (record.type) {
     case "steps": {

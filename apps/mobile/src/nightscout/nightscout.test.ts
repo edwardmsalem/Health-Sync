@@ -90,3 +90,59 @@ describe("NightscoutProvider", () => {
     await expect(provider.write()).rejects.toThrow(/read-only/);
   });
 });
+
+describe("temp basal supersession", () => {
+  const iso = (ms: number) => new Date(ms).toISOString();
+  const T = Date.UTC(2026, 7, 25, 12, 0, 0);
+  const MIN = 60_000;
+
+  it("truncates a temp basal replaced before its declared duration", () => {
+    // AAPS sets 1.0 U/h for 30 min, then replaces it 5 minutes later.
+    const records = parseTreatments([
+      { eventType: "Temp Basal", created_at: iso(T), rate: 1.0, duration: 30 },
+      { eventType: "Temp Basal", created_at: iso(T + 5 * MIN), rate: 2.0, duration: 30 },
+    ]);
+    const basals = records.filter((r) => r.metric === "insulin_basal_units");
+    expect(basals).toHaveLength(2);
+    // 1.0 U/h for 5 min = 0.083 U, NOT 0.5 U from the declared 30 min.
+    expect(basals[0]!.value).toBeCloseTo(0.083, 3);
+    expect(basals[0]!.end).toBe(T + 5 * MIN);
+    // The last one keeps its declared duration: 2.0 U/h for 30 min = 1 U.
+    expect(basals[1]!.value).toBeCloseTo(1.0, 3);
+  });
+
+  it("keeps the full duration when nothing supersedes it", () => {
+    const records = parseTreatments([
+      { eventType: "Temp Basal", created_at: iso(T), rate: 1.2, duration: 30 },
+    ]);
+    const b = records.find((r) => r.metric === "insulin_basal_units")!;
+    expect(b.value).toBeCloseTo(0.6, 3);
+    expect(b.end).toBe(T + 30 * MIN);
+  });
+
+  it("a back-to-back run does not over-count", () => {
+    // Six 30-minute temp basals at 1 U/h, each replaced after 5 minutes.
+    // Real delivery is 30 minutes of 1 U/h = 0.5 U, not 6 x 0.5 = 3 U.
+    const treatments = Array.from({ length: 6 }, (_, i) => ({
+      eventType: "Temp Basal",
+      created_at: iso(T + i * 5 * MIN),
+      rate: 1.0,
+      duration: 30,
+    }));
+    const basals = parseTreatments(treatments).filter(
+      (r) => r.metric === "insulin_basal_units",
+    );
+    const total = basals.reduce((t, b) => t + b.value, 0);
+    // five 5-minute segments + the final full 30 minutes
+    expect(total).toBeCloseTo(5 * (1 / 12) + 0.5, 2);
+    expect(total).toBeLessThan(3);
+  });
+
+  it("ignores a zero-rate or malformed temp basal", () => {
+    const records = parseTreatments([
+      { eventType: "Temp Basal", created_at: iso(T), rate: 0, duration: 30 },
+      { eventType: "Temp Basal", created_at: iso(T + MIN) },
+    ]);
+    expect(records.filter((r) => r.metric === "insulin_basal_units")).toHaveLength(0);
+  });
+});

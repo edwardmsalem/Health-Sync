@@ -13,6 +13,18 @@ import { DedupConfig, priorityRank } from "../config.js";
 
 export const MINUTE_MS = 60_000;
 
+/**
+ * Longest span a re-aggregated run may cover.
+ *
+ * Coalescing consecutive winning minutes keeps the canonical timeline tidy,
+ * but for a dense series it merges genuinely separate events into one huge
+ * sample: an hour of insulin temp basals became a single multi-unit "dose"
+ * larger than anything actually delivered. Totals stayed right, individual
+ * records did not — and a record read back for a dosing decision has to be
+ * right on its own, not just in aggregate. Capping bounds that distortion.
+ */
+export const MAX_RUN_MS = 60 * MINUTE_MS;
+
 export interface SeriesSample {
   start: EpochMs;
   end: EpochMs;
@@ -122,7 +134,13 @@ export function dedupeSeries(
     run = null;
   };
   for (const { minute, winner } of wonMinutes) {
-    if (run && run.source.id === winner.source.id && minute === run.endMinute + 1) {
+    const wouldSpan = (minute + 1 - (run?.startMinute ?? minute)) * MINUTE_MS;
+    if (
+      run &&
+      run.source.id === winner.source.id &&
+      minute === run.endMinute + 1 &&
+      wouldSpan <= MAX_RUN_MS
+    ) {
       run.value += winner.value;
       run.endMinute = minute;
     } else {

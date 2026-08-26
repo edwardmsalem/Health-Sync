@@ -24,6 +24,7 @@ import { NightscoutProvider } from "../nightscout/provider.ts";
 import { AsyncStorageKV } from "../storage/asyncStorageKV.ts";
 import { loadLedger } from "./ledgerStore.ts";
 import { noteSyncSucceeded } from "./reminder.ts";
+import { withSyncLock } from "./lock.ts";
 
 export interface SyncSettings {
   /** Most-trusted source first. */
@@ -110,7 +111,20 @@ export async function buildSyncStack(
   };
 }
 
-export async function runSync(settings: SyncSettings = DEFAULT_SETTINGS): Promise<AppSyncResult> {
+/**
+ * One sync pass. Serialized: if a pass is already running (background task,
+ * a HealthKit observer, the Sync button), this awaits it instead of starting
+ * a second one. Two overlapping passes would each see the same data as
+ * missing and both write it.
+ */
+export async function runSync(
+  settings: SyncSettings = DEFAULT_SETTINGS,
+): Promise<AppSyncResult | null> {
+  const { result } = await withSyncLock(() => runSyncUnlocked(settings));
+  return result;
+}
+
+async function runSyncUnlocked(settings: SyncSettings): Promise<AppSyncResult> {
   const stack = await buildSyncStack(settings);
 
   const end = Date.now();

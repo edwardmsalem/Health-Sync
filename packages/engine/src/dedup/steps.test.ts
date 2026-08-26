@@ -135,3 +135,18 @@ describe("dedupeSteps", () => {
     expect(result.total).toBe(90);
   });
 });
+
+describe("run length cap", () => {
+  it("does not merge a dense series into one huge sample", () => {
+    // Three hours of continuous minutes from one source.
+    const samples = Array.from({ length: 180 }, (_, i) =>
+      sample(watch, T0 + i * M, T0 + (i + 1) * M, 10),
+    );
+    const result = dedupeSteps(samples, cfg());
+    expect(result.total).toBe(1800); // total preserved
+    expect(result.samples.length).toBeGreaterThan(1);
+    for (const s of result.samples) {
+      expect(s.end - s.start).toBeLessThanOrEqual(60 * M);
+    }
+  });
+});

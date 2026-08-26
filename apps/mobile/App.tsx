@@ -91,9 +91,12 @@ export default function App() {
     setSyncing(true);
     setError(null);
     try {
+      // null means a sync was already running and this call joined it.
       const result = await runSync();
-      setReport(result.report);
-      setSkipped(result.fitbitSkippedWrites);
+      if (result) {
+        setReport(result.report);
+        setSkipped(result.fitbitSkippedWrites);
+      }
       setLastSyncAt(await getLastSyncAt(new AsyncStorageKV()));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
