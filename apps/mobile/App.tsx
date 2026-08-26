@@ -31,6 +31,7 @@ import {
 } from "./src/sync/reminder.ts";
 import { AsyncStorageKV } from "./src/storage/asyncStorageKV.ts";
 import { runSync } from "./src/sync/runSync.ts";
+import { resetSyncState } from "./src/sync/reset.ts";
 
 export default function App() {
   const [takeoutBusy, setTakeoutBusy] = useState(false);
@@ -45,6 +46,7 @@ export default function App() {
   const [nsConfigured, setNsConfigured] = useState(false);
   const [lastSyncAt, setLastSyncAt] = useState<number | null>(null);
   const [notifyOn, setNotifyOn] = useState(false);
+  const [resetNote, setResetNote] = useState<string | null>(null);
 
   useEffect(() => {
     getLastSyncAt(new AsyncStorageKV()).then(setLastSyncAt);
@@ -85,6 +87,15 @@ export default function App() {
       setTakeoutBusy(false);
       setTakeoutProgress(null);
     }
+  }, []);
+
+  const onReset = useCallback(async () => {
+    await resetSyncState(new AsyncStorageKV());
+    setLastSyncAt(null);
+    setReport(null);
+    setResetNote(
+      "Sync memory cleared. The next sync rebuilds from your sources — nothing was deleted.",
+    );
   }, []);
 
   const onSync = useCallback(async () => {
@@ -268,6 +279,13 @@ export default function App() {
             ) : (
               <Text style={styles.buttonText}>Sync now</Text>
             )}
+          </Pressable>
+
+          {resetNote && <Text style={styles.hint}>{resetNote}</Text>}
+          <Pressable onPress={onReset} disabled={syncing}>
+            <Text style={styles.link}>
+              Reset sync memory (after deleting data in Health)
+            </Text>
           </Pressable>
         </View>
 

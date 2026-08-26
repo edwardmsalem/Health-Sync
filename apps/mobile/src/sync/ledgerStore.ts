@@ -25,7 +25,7 @@ class KVLedger extends InMemoryLedger {
 export async function loadLedger(kv: KV): Promise<SyncLedger> {
   const ledger = new KVLedger(kv);
   const raw = await kv.get(LEDGER_KEY);
-  if (raw) {
+  if (raw && raw.trim() !== "") {
     try {
       ledger.hydrate(JSON.parse(raw) as LedgerState);
     } catch {
